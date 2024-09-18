@@ -1,0 +1,190 @@
+<script src="lib1.js"></script>
+
+<body bgcolor="black" text="white" link="white" alink="white" vlink="white">
+  <center>
+    <canvas id="canvas1" width="600" height="600"></canvas>
+  </center>
+</body>
+
+<!!-------- VERTEX SHADER: YOU PROBABLY DON'T WANT TO CHANGE THIS RIGHT NOW -------->
+
+<script id="my_vertex_shader" type="x-shader/x-vertex">
+  attribute vec3 aPos;
+  varying   vec3 vPos;
+  void main() {
+     gl_Position = vec4(aPos, 1.);
+     vPos = aPos;
+  }
+</script>
+
+<!!-------- FRAGMENT SHADER: THIS IS WHERE YOU WILL DO YOUR WORK -------->
+
+<script id="my_fragment_shader" type="x-shader/x-fragment" src="shader.js">
+
+  float getSphereSide(float r, float x, float y) {
+    return sqrt(r * r - x * x - y * y);
+  }
+
+  // attributes passed from vertex shader
+  varying vec3 vPos;
+
+  // variables passed from javascript
+  uniform vec2 uResolution;
+  uniform float uTime;
+
+  // overall parameters
+  const float zoomScale = .5;
+  const float animSpeed = 0.5;
+  const vec3 overallColorTint = vec3(.4, .2, .0);
+  const float environmentColorTintIntensity = 0.3;
+  // background parameters
+  const vec3 gradientColorTop = vec3(1.);
+  const vec3 gradientColorBottom = vec3(.25);
+  const float gradientIntensity = .25;
+  // sphere parameters
+  const float r = 1.;
+  const float edgeSmoothness = .3;
+  const vec3 sphereBaseColor = vec3(0.);
+  const vec3 brightnessMultiplier = vec3(.5);
+  const vec3 lightDirection = normalize(vec3(1.));
+  // sphere disintegration parameters
+  const float disintegrationAmplitude = 1.;
+  const float disintegrationBaseRadius = 1.5;
+  const vec2 disintegrationNoiseDetails = vec2(8.);
+  // sphere discoloration parameters
+  const vec3 discolorationNoiseDetails = vec3(2.);
+  const vec3 discolorationNoiseOffset3D = vec3(.0, .2, .4);
+
+  void main()
+  {
+    float adjustedTime = uTime * animSpeed;
+
+    mat3 coordAnimMatrix = mat3(
+      .1*cos(adjustedTime), -2.*sin(adjustedTime), 0,
+      2.*sin(adjustedTime), .1*cos(adjustedTime), 0,
+      0, 0, 1
+    );
+    mat3 colorTintAnimMatrix = mat3(
+      .2*cos(adjustedTime), -1.*sin(adjustedTime), 0,
+      1.*sin(adjustedTime), .3*cos(adjustedTime), 0,
+      0, 0, 1
+    );
+
+    // handles responsiveness based on canvas dimensions
+    vec3 scale = vec3(1. / zoomScale);
+    scale.xy *= uResolution / min(uResolution.x, uResolution.y);
+    vec3 scaledPos = vPos * scale;
+
+    // animates disintegration
+    float disintegrationRadius = disintegrationBaseRadius + disintegrationAmplitude * sin(adjustedTime);
+
+    vec3 coord = vec3(scaledPos.xy, 0.);
+    coord *= coordAnimMatrix;
+    vec3 disintegrationNoisePoint = vec3(scaledPos.xy * disintegrationNoiseDetails, adjustedTime);
+    vec2 disintegrationNoise2D = vec2(noise(disintegrationNoisePoint), noise(disintegrationNoisePoint + 999.));
+    vec2 disintegrationOffset2D = disintegrationRadius * disintegrationNoise2D;
+    vec3 rgb = mix(gradientColorBottom, gradientColorTop, gradientIntensity * zoomScale * scaledPos.y);
+
+    coord.xy += disintegrationOffset2D;
+    coord.z = getSphereSide(r, coord.x, coord.y);
+
+    vec3 environmentColorTint = environmentColorTintIntensity * vec3(
+      noise(vec3(coord.xy * .1, adjustedTime)),
+      noise(vec3(coord.zy * .2, adjustedTime)),
+      noise(vec3(coord.yx * .3, adjustedTime))
+    );
+
+    rgb += environmentColorTint;
+    if (coord.z > 0.) {
+      vec3 discolorationNoisePoint = coord * discolorationNoiseDetails + adjustedTime;
+      vec3 discolorationOffset3D = vec3(
+        noise(discolorationNoisePoint + discolorationNoiseOffset3D.x),
+        noise(discolorationNoisePoint + discolorationNoiseOffset3D.y),
+        noise(discolorationNoisePoint + discolorationNoiseOffset3D.z)
+      );
+      // for smooth edges
+      float sphereOpacity = smoothstep(0., edgeSmoothness, coord.z);
+      float brightness = max(0., dot(coord, lightDirection));
+      vec3 sphereRGB = sphereBaseColor;
+      sphereRGB += brightness * brightnessMultiplier;
+      sphereRGB += discolorationOffset3D;
+      rgb = mix(rgb, sphereRGB, sphereOpacity);
+    }
+    rgb += environmentColorTint;
+
+    rgb += overallColorTint * colorTintAnimMatrix;
+
+    gl_FragColor = vec4(sqrt(rgb), 1.0);
+  }
+</script>
+
+<!!-------- CREATE A PROPERLY DESCRIPTIVE TITLE BELOW -------->
+
+<script id="my_title" type="text/html">
+  Jack's Homework #1: Burning Planet [ <a href="https://github.com/jackbdu/computer-graphics">GitHub Repo</a> ]
+</script>
+
+<!!-------- HERE IS WHERE YOU CAN PROVIDE A LONGER TEXT DESCRIPTION -------->
+
+<script id="my_instructions" type="text/html"></script>
+
+<!!-------- YOU PROBABLY DON'T WANT TO CHANGE ANYTHING BELOW FOR NOW -------->
+
+<script>
+  // CREATE THE HTML DOCUMENT
+
+  let vs = my_vertex_shader.innerHTML,
+    fs = my_fragment_shader.innerHTML;
+  fs = fs.substring(1, fs.length);
+
+  document.body.innerHTML = [
+    "",
+    "<center><font size=6 color=#b0b0b0>" + my_title.innerHTML + "</center>",
+    "<TABLE cellspacing=0 cellpadding=0><TR>",
+    "<td width=50></td><td><font color=red size=5><div id=errorMessage>&nbsp;</div></font></td>",
+    "</TR><TR>",
+    "<table cellspacing=10>",
+    "<tr>",
+    "<td valign=top><font size=2 color=red><div id=errorMarker>&nbsp;</div></font></td>",
+    "<td valign=top>",
+    "<textArea id=textArea spellcheck=false ",
+    'style="font:16px courier;outline-width:0;border-style:none;resize:none;overflow:scroll;"',
+    "></textArea>",
+    "</td><td valign=top>" + document.body.innerHTML + "</td>",
+    "<td valign=top><font size=5>" + my_instructions.innerHTML + "</td>",
+    "</tr></table>",
+    "</TR></TABLE>",
+  ].join("");
+
+  // SET UP THE EDITABLE TEXT AREA ON THE LEFT SIDE.
+
+  let text = fs.split("\n"),
+    cols = 0;
+  for (let i = 0; i < text.length; i++) cols = Math.max(cols, text[i].length);
+
+  textArea.rows = text.length;
+  textArea.cols = cols;
+  textArea.value = fs;
+  textArea.style.backgroundColor = "#202020";
+  textArea.style.color = "white";
+
+  // REPARSE THE SHADER PROGRAM AFTER EVERY KEYSTROKE.
+
+  textArea.onkeyup = function () {
+    canvas1.setShaders(vs, this.value);
+  };
+
+  // SET THE CURRENT TIME IN SECONDS BEFORE RENDERING EACH FRAME.
+
+  let startTime = Date.now();
+
+  function animate(gl) {
+    let time = (Date.now() - startTime) / 1000;
+    setUniform("1f", "uTime", time);
+    setUniform("2fv", "uResolution", [canvas1.width, canvas1.height]);
+  }
+
+  // START EVERYTHING.
+
+  gl_start(canvas1, vs, fs);
+</script>
