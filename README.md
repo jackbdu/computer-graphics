@@ -7,7 +7,7 @@
 
 ## Homework Submissions
 
--   [Homework 1: Burning Planets](https://jackbdu.com/computer-graphics/hw1) [ [Source Code](hw1) ]
+-   [Homework 1: Burning Planets](https://jackbdu.com/computer-graphics/hw1) [ [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw1) ]
 
 ## Daily Progress Documentation
 
