@@ -5,13 +5,11 @@
 -   [CSCI-GA.2270-001 Computer Graphics](https://cs.nyu.edu/~perlin/courses/fall2024/)
 -   Instructor: [Ken Perlin](https://cs.nyu.edu/~perlin/)
 
-## Homework Submissions
-
--   [Homework 1: Burning Planets](https://jackbdu.com/computer-graphics/hw1) [ [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw1) ]
-
-## Daily Progressions
+## Homework Submissions & Daily Progressions
 
 ### Homework 1
+
+[ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw1) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw1) ]
 
 | ![](assets/20240911-daily-experiment-glsl-shader-frag-sphere-rotation-1080p-frame-1.png) | ![](assets/20240912-daily-experiment-glsl-shader-frag-sphere-disintegrating-1080p-frame-1.png) | ![](assets/20240913-daily-experiment-glsl-shader-frag-sphere-fluid-surface-1080p-frame-1.png) | ![](assets/20240914-daily-experiment-glsl-shader-frag-sphere-fluid-surface-colorful-1080p-frame-1.png) |
 | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
