@@ -1,0 +1,338 @@
+<body bgcolor="black">
+  <center>
+    <h1 style="color: #fff">Jack's Homework #2 [ <a href="https://github.com/jackbdu/computer-graphics">GitHub Repo</a> ]</h1>
+    <canvas id="canvas1" width="800" height="800"></canvas>
+    <script>
+      // INITIALIZE GPU PROGRAM
+
+      let start_gl = (canvas, meshData, vertexSize, vertexShader, fragmentShader) => {
+        let gl = canvas.getContext("webgl");
+        let program = gl.createProgram();
+        gl.program = program;
+        let addshader = (type, src) => {
+          let shader = gl.createShader(type);
+          gl.shaderSource(shader, src);
+          gl.compileShader(shader);
+          if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw "Cannot compile shader:\n\n" + gl.getShaderInfoLog(shader);
+          gl.attachShader(program, shader);
+        };
+        addshader(gl.VERTEX_SHADER, vertexShader);
+        addshader(gl.FRAGMENT_SHADER, fragmentShader);
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw "Could not link the shader program!";
+        gl.useProgram(program);
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LEQUAL);
+        let vertexAttribute = (name, size, position) => {
+          let attr = gl.getAttribLocation(program, name);
+          gl.enableVertexAttribArray(attr);
+          gl.vertexAttribPointer(attr, size, gl.FLOAT, false, vertexSize * 4, position * 4);
+        };
+        vertexAttribute("aPos", 3, 0);
+        return gl;
+      };
+
+      // LOGIC TO TRACK THE CURSOR
+
+      let r = canvas1.getBoundingClientRect(),
+        cursor = [0, 0, 0];
+      let setCursor = (e, z) => (cursor = [((e.clientX - r.left) / canvas1.width) * 2 - 1, 1 - ((e.clientY - r.top) / canvas1.height) * 2, z !== undefined ? z : cursor[2]]);
+      canvas1.onmousedown = (e) => setCursor(e, 1);
+      canvas1.onmousemove = (e) => setCursor(e);
+      canvas1.onmouseup = (e) => setCursor(e, 0);
+
+      // TRIANGLE DATA (IN THIS CASE, ONE SQUARE)
+
+      let meshData = [{ type: 1, mesh: new Float32Array([-1, 1, 0, 1, 1, 0, -1, -1, 0, 1, -1, 0]) }];
+
+      const NSPHERES = 3;
+
+      // VERTEX AND FRAGMENT SHADERS
+
+      let vertexSize = 3;
+      let vertexShader = `
+   attribute vec3 aPos;
+   varying   vec3 vPos;
+   void main() {
+      gl_Position = vec4(aPos, 1.0);
+      vPos = aPos;
+   }
+`;
+      let fragmentShader = `
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+// noise function provided by Ken Perlin
+float noise(vec3 point) { float r = 0.; for (int i=0;i<16;i++) {
+  vec3 D, p = point + mod(vec3(i,i/4,i/8) , vec3(4.0,2.0,2.0)) +
+       1.7*sin(vec3(i,5*i,8*i)), C=floor(p), P=p-C-.5, A=abs(P);
+  C += mod(C.x+C.y+C.z,2.) * step(max(A.yzx,A.zxy),A) * sign(P);
+  D=34.*sin(987.*float(i)+876.*C+76.*C.yzx+765.*C.zxy);P=p-C-.5;
+  r+=sin(6.3*dot(P,fract(D)-.5))*pow(max(0.,1.-2.*dot(P,P)),4.);
+} return .5 * sin(r); }
+
+#define PI 3.14159265359
+
+// Attributes passed from vertex shader.
+varying vec3 vPos;
+
+// Main sketch variables.
+uniform vec3 uCursor;
+uniform vec2 uResolution;
+uniform vec4 uSpheres[${NSPHERES}];
+uniform float uTime;
+uniform float uFocalLength;
+
+float getRayCloserIntersectionDistance(vec3 sourcePosition, vec3 rayDirection, vec3 sphereCenterPosition, float sphereRadius) {
+  sourcePosition -= sphereCenterPosition; // use sphereCenterPosition as origin
+  float sourceToSphereCenterDistanceSquared = dot(sourcePosition, sourcePosition);
+  float sourceToIntersectionsCenterDistance = dot(sourcePosition, rayDirection);
+  float sourceToIntersectionsCenterDistanceSquared = sourceToIntersectionsCenterDistance * sourceToIntersectionsCenterDistance;
+  float sphereCenterToIntersectionsCenterDistanceSquared = sourceToSphereCenterDistanceSquared - sourceToIntersectionsCenterDistanceSquared;
+  float sphereRadiusSquared = sphereRadius * sphereRadius;
+  float IntersectionsCenterToInersectionSquared = sphereRadiusSquared - sphereCenterToIntersectionsCenterDistanceSquared;
+  if (IntersectionsCenterToInersectionSquared > 0.) {
+    float IntersectionsCenterToInersection = sqrt(IntersectionsCenterToInersectionSquared);
+    float rayCloserIntersectionDistance = -sourceToIntersectionsCenterDistance - IntersectionsCenterToInersection;
+    return rayCloserIntersectionDistance;
+  }
+  return -1.;
+}
+
+float turbulence(vec3 point) {
+  const float rotation = 3.1415926 / 6.;
+  const float yOffset = 100.;
+  const int detailsLevel = 9;
+  const mat3 yRotationMatrix = mat3(
+    cos(rotation), 0, sin(rotation),
+    0, 1, 0,
+    -sin(rotation), 0, cos(rotation)
+  );
+
+  float turbulenceAmount = 0.;
+  float scale = 1.;
+  for (int i = 0; i < detailsLevel; i++) {
+    turbulenceAmount += abs(noise(scale * point)) / scale;
+    scale *= 2.;
+    point *= yRotationMatrix;
+    point.y += yOffset;
+  }
+  return turbulenceAmount;
+}
+
+mat3 rotationMatrix(vec3 angle) {
+  mat3 xRotationMatrix = mat3(
+    1, 0, 0,
+    0, cos(angle.x), -sin(angle.x),
+    0, sin(angle.x), cos(angle.x)
+  );
+  mat3 yRotationMatrix = mat3(
+    cos(angle.y), 0, -sin(angle.y),
+    0, 1, 0,
+    sin(angle.y), 0, cos(angle.y)
+  );
+  mat3 zRotationMatrix = mat3(
+    cos(angle.z), -sin(angle.z), 0,
+    sin(angle.z), cos(angle.z), 0,
+    0, 0, 1
+  );
+  return xRotationMatrix * yRotationMatrix * zRotationMatrix;
+}
+
+// overall parameters
+const float zoomScale = 2.;
+const float animSpeed = .2;
+const vec3 overallColorTint = vec3(0.);
+
+// background parameters
+const vec3 gradientColorTop = vec3(.4, .02, .02);
+const vec3 gradientColorBottom = vec3(.3, .02, .02);
+const float gradientIntensity = .2;
+const vec3 backgroundNoiseDetails = vec3(.3, .4, .5);
+const float backgroundNoiseIntensity = 0.2;
+
+// camera parameters
+vec3 cameraPosition = vec3(0., 0., 1.);
+
+// sphere parameters
+// sphere material parameters
+const vec3 materialColor = vec3(.45, .01, .01);
+const vec3 materialTextureNoiseDetails = vec3(.2);
+const vec3 materialTextureNoiseSpaceScale = vec3(9., 4., 3.);
+const float materialTextureNoiseIntensity = 2.5;
+// sphere material pattern movement parameters
+const float textureMovementAmplitude = .2;
+const float textureMovementBaseRadius = 0.;
+const vec3 textureMovementNoiseSpaceScale = vec3(.5);
+// disintegration parameters
+
+
+void main() 
+{ 
+  // lights
+  const float ambientLightIntensity = 1.5;
+  const vec3 lightDirection = normalize(vec3(1.));
+  const float highlightPower = 4.;
+  const int directionalLightsNum = 2;
+  vec3 directionalLightDirections[directionalLightsNum];
+  vec3 directionalLightColors[directionalLightsNum];
+  float directionalLightIntensities[directionalLightsNum];
+  // key light
+  directionalLightDirections[0] = normalize(vec3(1.));
+  directionalLightIntensities[0] = .0;
+  directionalLightColors[0] = directionalLightIntensities[0] * normalize(vec3(1.));
+  // fill light
+  directionalLightDirections[1] = normalize(vec3(-1., -1., 1.));
+  directionalLightIntensities[1] = .0;
+  directionalLightColors[1] = directionalLightIntensities[1] * normalize(vec3(1.));
+  
+  float adjustedTime = uTime * animSpeed;
+  
+  mat3 cameraPosAnimMatrix = mat3(
+    1, 0, 0,
+    0, 1, 0,
+    0, 0, 1
+  );
+  mat2 coordAnimMatrix = mat2(
+    1, 0,
+    0, 1
+  );
+  mat3 colorTintAnimMatrix = mat3(
+    1, 0, 0,
+    0, 1, 0,
+    0, 0, 1
+  );
+  
+  cameraPosition *= cameraPosAnimMatrix;
+  
+  // handles responsiveness based on canvas dimensions
+  vec3 scale = vec3(1. / zoomScale);
+  scale.xy *= uResolution / min(uResolution.x, uResolution.y);
+  vec3 scaledPos = vPos * scale;
+  
+  vec2 coord = vec2(scaledPos.xy);
+  coord *= coordAnimMatrix;
+  
+  vec3 rgb = mix(gradientColorBottom, gradientColorTop, gradientIntensity * zoomScale * scaledPos.y);
+  rgb += vec3(turbulence(vec3(coord, adjustedTime) * backgroundNoiseDetails)) * backgroundNoiseIntensity;
+  
+  vec3 rayDirection = normalize(vec3(coord, -uFocalLength));
+  float closestRayIntersectionDistance = 1000.;
+  
+  // for fluid surface
+  //float sphereRadiusOffset = 0.02*noise(vec3(scaledPos.xyz*64.));
+  float sphereRadiusOffset = 0.;
+  for (int i = 0; i < ${NSPHERES}; i++) {
+    vec3 sphereCenter = uSpheres[i].xyz;
+    float sphereRadius = uSpheres[i].w + sphereRadiusOffset;
+    float rayCloserIntersectionDistance = getRayCloserIntersectionDistance(cameraPosition, rayDirection, sphereCenter, sphereRadius);
+    if (rayCloserIntersectionDistance > 0. && rayCloserIntersectionDistance < closestRayIntersectionDistance) {
+      
+      closestRayIntersectionDistance = rayCloserIntersectionDistance;
+      vec3 sphereSurfacePoint = cameraPosition + rayCloserIntersectionDistance * rayDirection;
+      vec3 sphereSurfacePointRelative = sphereSurfacePoint - sphereCenter;
+      
+      // rotation
+      float rotationOffset = float(i) / float(${NSPHERES}) * PI;
+      vec3 rotationAngle = vec3(
+        (adjustedTime + rotationOffset) * (mod(float(i + 0), 3.)),
+        (adjustedTime + rotationOffset) * (mod(float(i + 1), 3.)),
+        (adjustedTime + rotationOffset) * (mod(float(i + 2), 3.))
+      );
+      sphereSurfacePointRelative *= rotationMatrix(rotationAngle);
+      
+      // material texture
+      float textureNoiseSpaceOffset = float(i) * 1000.; // for different material between each sphere
+      // texture animation
+      float textureMovementRadius = textureMovementBaseRadius + textureMovementAmplitude * sin(adjustedTime);
+      vec3 textureMovementNoisePoint = sphereSurfacePointRelative * textureMovementNoiseSpaceScale + textureNoiseSpaceOffset;
+      vec3 textureMovementNoise3D = vec3(turbulence(textureMovementNoisePoint));
+      vec3 textureMovementOffset3D = textureMovementRadius * textureMovementNoise3D;
+      sphereSurfacePointRelative += vec3(textureMovementOffset3D);
+      // material color
+      vec3 materialTextureNoisePoint = sphereSurfacePointRelative * materialTextureNoiseSpaceScale + textureNoiseSpaceOffset;
+      float turbulenceAmount = sqrt(turbulence(materialTextureNoisePoint * materialTextureNoiseDetails));
+      float turbulenceAmountSin = turbulenceAmount * (.5 + .5 * sin(turbulenceAmount * 64. + adjustedTime));
+      float turbulenceAmountCos = turbulenceAmount * (.5 + .5 * cos(turbulenceAmount * 32. + adjustedTime));
+      vec3 materialTexture = vec3(turbulenceAmountSin, turbulenceAmountCos * turbulenceAmountSin, turbulenceAmountCos * turbulenceAmountCos * turbulenceAmountSin) * materialTextureNoiseIntensity;
+      vec3 texturedMaterial = materialColor + materialTexture;
+      
+      // light
+      vec3 sphereNormal = normalize(sphereSurfacePoint - sphereCenter);
+      vec3 reflection = rayDirection - 2. * sphereNormal * dot(sphereNormal, rayDirection);
+      vec3 lightRGB = vec3(0.);
+      for (int j = 0; j < directionalLightsNum; j++) {
+        vec3 directionalLight = directionalLightColors[j] * max(0., dot(sphereNormal, directionalLightDirections[j]));
+        vec3 directionalLightSpecular = directionalLightColors[j] * pow(max(0., dot(reflection, directionalLightDirections[j])), highlightPower);
+        lightRGB += texturedMaterial * directionalLight;
+        lightRGB += directionalLightSpecular;
+      }
+      vec3 sphereRGB = texturedMaterial * ambientLightIntensity + lightRGB;
+      
+      rgb = sphereRGB;
+    }
+  }
+  
+  rgb += overallColorTint * colorTintAnimMatrix;
+  
+  // clamp and output final color
+  gl_FragColor = vec4(sqrt(rgb), 1.0);
+}
+`;
+
+      // WAIT 100 MSECS BEFORE STARTING UP
+
+      setTimeout(() => {
+        let gl = start_gl(canvas1, meshData, vertexSize, vertexShader, fragmentShader);
+
+        // FIND LOCATIONS IN GPU PROGRAM OF UNIFORM VARIABLES
+
+        let uFocalLength = gl.getUniformLocation(gl.program, "uFocalLength");
+        let uTime = gl.getUniformLocation(gl.program, "uTime");
+        let uCursor = gl.getUniformLocation(gl.program, "uCursor");
+        let uSpheres = gl.getUniformLocation(gl.program, "uSpheres");
+        let uResolution = gl.getUniformLocation(gl.program, "uResolution");
+
+        // ANIMATE AND RENDER EACH ANIMATION FRAME
+
+        let startTime = Date.now() / 1000;
+        setInterval(() => {
+          // SET ALL UNIFORM VARIABLES
+
+          let time = Date.now() / 1000 - startTime;
+          gl.uniform1f(uTime, time);
+          gl.uniform2fv(uResolution, [canvas1.width, canvas1.height]);
+          gl.uniform3fv(uCursor, cursor);
+          gl.uniform1f(uFocalLength, 2.5);
+
+          let data = [];
+          for (let i = 0; i < NSPHERES; i++) {
+            const animSpeed = 0.25;
+            const offsetZ = -2;
+            const zAmplitude = 0;
+            const frequency = 1;
+            const animFactor = 4;
+            const r = 0.25;
+            const movementRadius = 0.3;
+            const theta = time * animSpeed + (2 * Math.PI * i) / NSPHERES;
+            const x = movementRadius * Math.sin(theta * 1);
+            const y = movementRadius * Math.cos(theta * 1);
+            const z = zAmplitude * movementRadius * Math.sin(theta * frequency + time * animFactor) + offsetZ;
+            data.push(x, y, z, -r);
+          }
+          gl.uniform4fv(uSpheres, data);
+
+          // RENDER THE FRAME
+
+          for (let n = 0; n < meshData.length; n++) {
+            let mesh = meshData[n].mesh;
+            gl.bufferData(gl.ARRAY_BUFFER, mesh, gl.STATIC_DRAW);
+            gl.drawArrays(meshData[n].type ? gl.TRIANGLE_STRIP : gl.TRIANGLES, 0, mesh.length / vertexSize);
+          }
+        }, 30);
+      }, 100);
+    </script>
+  </center>
+</body>
