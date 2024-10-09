@@ -1,0 +1,562 @@
+<body bgcolor="black">
+  <center>
+    <div style="color: #b0b0b0; font-family: arial, sans-serif">
+      <h1>Jack's Homework #3</h1>
+      <p>[ <a style="color: #fff" href="https://jackbdu.com/computer-graphics/">Home</a> | <a style="color: #fff" href="https://github.com/jackbdu/computer-graphics/tree/main/hw3">Source Code</a> ]</p>
+    </div>
+    <canvas id="canvas1" width="800" height="800"></canvas>
+    <script src="matrix.js"></script>
+    <script>
+      // INITIALIZE GPU PROGRAM
+
+      let start_gl = (canvas, meshData, vertexSize, vertexShader, fragmentShader) => {
+        let gl = canvas.getContext("webgl");
+        let program = gl.createProgram();
+        gl.program = program;
+        let addshader = (type, src) => {
+          let shader = gl.createShader(type);
+          gl.shaderSource(shader, src);
+          gl.compileShader(shader);
+          if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw "Cannot compile shader:\n\n" + gl.getShaderInfoLog(shader);
+          gl.attachShader(program, shader);
+        };
+        addshader(gl.VERTEX_SHADER, vertexShader);
+        addshader(gl.FRAGMENT_SHADER, fragmentShader);
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw "Could not link the shader program!";
+        gl.useProgram(program);
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LEQUAL);
+        let vertexAttribute = (name, size, position) => {
+          let attr = gl.getAttribLocation(program, name);
+          gl.enableVertexAttribArray(attr);
+          gl.vertexAttribPointer(attr, size, gl.FLOAT, false, vertexSize * 4, position * 4);
+        };
+        vertexAttribute("aPos", 3, 0);
+        return gl;
+      };
+
+      // LOGIC TO TRACK THE CURSOR
+
+      let r = canvas1.getBoundingClientRect(),
+        cursor = [0, 0, 0];
+      let setCursor = (e, z) => (cursor = [((e.clientX - r.left) / canvas1.width) * 2 - 1, 1 - ((e.clientY - r.top) / canvas1.height) * 2, z !== undefined ? z : cursor[2]]);
+      canvas1.onmousedown = (e) => setCursor(e, 1);
+      canvas1.onmousemove = (e) => setCursor(e);
+      canvas1.onmouseup = (e) => setCursor(e, 0);
+
+      // TRIANGLE DATA (IN THIS CASE, ONE SQUARE)
+
+      let meshData = [{ type: 1, mesh: new Float32Array([-1, 1, 0, 1, 1, 0, -1, -1, 0, 1, -1, 0]) }];
+
+      const NSPHERES = 2;
+
+      // VERTEX AND FRAGMENT SHADERS
+
+      let vertexSize = 3;
+      let vertexShader = `
+   attribute vec3 aPos;
+   varying   vec3 vPos;
+   void main() {
+      gl_Position = vec4(aPos, 1.0);
+      vPos = aPos;
+   }
+`;
+      let fragmentShader = `
+precision mediump float;
+
+/* macros starts */
+#define PI 3.14159265359
+/* macros ends */
+
+/* varying variables starts */
+varying vec3 vPos;
+/* varying variables ends */
+
+/* uniform variables starts */
+uniform vec3 uCursor;
+uniform vec2 uResolution;
+uniform vec4 uSpheres[${NSPHERES}];
+uniform float uTime;
+uniform float uFocalLength;
+/* uniform variables ends */
+
+/* global parameters starts */
+const int detailsLevel = 9;
+const float animSpeed = .2;
+const vec3 overallColorTint = vec3(0.);
+const float maxRenderingDistance = 50.;
+float adjustedTime = uTime * animSpeed;
+/* global parameters ends */
+
+/* camera parameters starts */
+const float cameraZoom = 4.;
+const vec3 cameraPosition = vec3(0., 0., 10.);
+const vec3 cameraViewOffset = vec3(0., -.375, 0.);
+/* camera parameters ends */
+
+/* background parameters starts */
+const vec3 gradientColorTop = vec3(.2, .2, 1.);
+const vec3 gradientColorBottom = vec3(1.);
+const float gradientIntensity = 1.;
+/* background parameters ends */
+
+/* light parameters starts */
+const vec3 ambientLightColor = normalize(vec3(1.));
+const float ambientLightIntensity = 0.3;
+const int directionalLightsNum = 2;
+vec3 directionalLightDirections[directionalLightsNum];
+vec3 directionalLightColors[directionalLightsNum];
+float directionalLightIntensities[directionalLightsNum];
+/* light parameters ends */
+
+/* sphere material parameters starts */
+const float sphereTransparency = 0.4;
+const float sphereMaterialHighlightPower = 16.;
+const vec3 sphereMaterialColor = vec3(.3, .05, .5);
+const vec3 sphereMaterialTextureNoiseDetails = vec3(2., 1., 4.);
+const vec3 sphereMaterialTextureNoiseSpaceScale = vec3(2., 4., 1.);
+const float sphereMaterialTextureNoiseIntensity = .7;
+const float sphereMaterialTextureAnimAmplitude = 2.;
+const float sphereMaterialTextureAnimBaseRadius = 2.;
+const vec3 sphereMaterialTextureAnimNoiseSpaceScale = vec3(.1);
+/* sphere material parameters ends */
+
+/* plane parameters starts */
+const vec4 plane = vec4(0., 1., 0, 1.); // (a, b, c, d) in ax + by + cz + d = 0;
+const float planeReflectiveness = .5;
+const float planeSurfaceTurbulenceAmplitude = .5;
+const float planeMaterialHighlightPower = 32.;
+const vec3 planeMaterialColor = vec3(0.1, 0.13, .17);
+const vec3 planeMaterialTextureNoiseDetails = vec3(.8);
+const vec3 planeMaterialTextureNoiseSpaceScale = vec3(.2);
+const float planeMaterialTextureNoiseIntensity = .8;
+const float planeTextureAnimAmplitude = 0.;
+const float planeTextureAnimBaseRadius = 0.;
+const vec3 planeTextureAnimNoiseSpaceScale = vec3(.4);
+/* plane parameters ends */
+
+/* refraction parameters starts */
+const float airRefractiveIndex = 1.2;
+const float sphereRefractiveIndex = 1.4;
+/* refraction parameters ends */
+
+/* transformation matrices starts */
+mat3 colorTintAnimMatrix = mat3(
+  1, 0, 0,
+  0, 1, 0,
+  0, 0, 1
+);
+/* transformation matrices ends */
+
+/* functions starts */
+// noise function provided by Ken Perlin
+float noise(vec3 point) { float r = 0.; for (int i=0;i<16;i++) {
+  vec3 D, p = point + mod(vec3(i,i/4,i/8) , vec3(4.0,2.0,2.0)) +
+       1.7*sin(vec3(i,5*i,8*i)), C=floor(p), P=p-C-.5, A=abs(P);
+  C += mod(C.x+C.y+C.z,2.) * step(max(A.yzx,A.zxy),A) * sign(P);
+  D=34.*sin(987.*float(i)+876.*C+76.*C.yzx+765.*C.zxy);P=p-C-.5;
+  r+=sin(6.3*dot(P,fract(D)-.5))*pow(max(0.,1.-2.*dot(P,P)),4.);
+} return .5 * sin(r); }
+
+// adapted from raytracing function provided by Ken Perlin
+float raySphereIntersectionDistance(vec3 sourcePosition, vec3 rayDirection, vec3 sphereCenterPosition, float sphereRadius, float closerOrFarther) {
+  sourcePosition -= sphereCenterPosition; // use sphereCenterPosition as origin
+  float sourceToSphereCenterDistanceSquared = dot(sourcePosition, sourcePosition);
+  float sourceToIntersectionsCenterDistance = dot(sourcePosition, rayDirection);
+  float sourceToIntersectionsCenterDistanceSquared = sourceToIntersectionsCenterDistance * sourceToIntersectionsCenterDistance;
+  float sphereCenterToIntersectionsCenterDistanceSquared = sourceToSphereCenterDistanceSquared - sourceToIntersectionsCenterDistanceSquared;
+  float sphereRadiusSquared = sphereRadius * sphereRadius;
+  float IntersectionsCenterToInersectionSquared = sphereRadiusSquared - sphereCenterToIntersectionsCenterDistanceSquared;
+  if (IntersectionsCenterToInersectionSquared > 0.) {
+    float IntersectionsCenterToInersection = sqrt(IntersectionsCenterToInersectionSquared);
+    float rayCloserIntersectionDistance = -sourceToIntersectionsCenterDistance + closerOrFarther * IntersectionsCenterToInersection;
+    return rayCloserIntersectionDistance;
+  }
+  return -1.;
+}
+
+// adapted from turbulence function provided by Ken Perlin
+float turbulence(vec3 point, int detailsLevel) {
+  const float rotation = 3.1415926 / 6.;
+  const float yOffset = 100.;
+  const int maxDetailsLevel = 9;
+  const mat3 yRotationMatrix = mat3(
+    cos(rotation), 0, sin(rotation),
+    0, 1, 0,
+    -sin(rotation), 0, cos(rotation)
+  );
+
+  float turbulenceAmount = 0.;
+  float scale = 1.;
+  for (int i = 0; i < maxDetailsLevel; i++) {
+    if (i >= detailsLevel) break;
+    turbulenceAmount += abs(noise(scale * point)) / scale;
+    scale *= 2.;
+    point *= yRotationMatrix;
+    point.y += yOffset;
+  }
+  return turbulenceAmount;
+}
+
+float rayPlaneIntersectionDistance(vec3 sourcePosition, vec3 rayDirection, vec4 plane) {
+  vec4 sourcePosition4D = vec4(sourcePosition, 1.);
+  vec4 rayDirection4D = vec4(rayDirection, 0.);
+  float rayPlaneIntersectionDirection = dot(plane, rayDirection4D);
+  float rayPlaneIntersectionDistance = -dot(plane, sourcePosition4D)/rayPlaneIntersectionDirection;
+  return rayPlaneIntersectionDistance;
+}
+
+mat3 rotationMatrix(vec3 angle) {
+  mat3 xRotationMatrix = mat3(
+    1, 0, 0,
+    0, cos(angle.x), sin(angle.x),
+    0, -sin(angle.x), cos(angle.x)
+  );
+  mat3 yRotationMatrix = mat3(
+    cos(angle.y), 0, -sin(angle.y),
+    0, 1, 0,
+    sin(angle.y), 0, cos(angle.y)
+  );
+  mat3 zRotationMatrix = mat3(
+    cos(angle.z), sin(angle.z), 0,
+    -sin(angle.z), cos(angle.z), 0,
+    0, 0, 1
+  );
+  return xRotationMatrix * yRotationMatrix * zRotationMatrix;
+}
+/* functions ends */
+
+/* shading functions starts */
+
+/* lights shading functions starts */
+vec3 lightsShading(vec3 rgb, vec3 surfaceNormal, vec3 reflectionRayDirection, float highlightPower) {
+  rgb += ambientLightIntensity * ambientLightColor;
+  for (int j = 0; j < directionalLightsNum; j++) {
+    vec3 directionalLight = directionalLightColors[j] * max(0., dot(surfaceNormal, directionalLightDirections[j]));
+    vec3 directionalLightSpecular = directionalLightColors[j] * pow(max(0., dot(reflectionRayDirection, directionalLightDirections[j])), highlightPower);
+    rgb += rgb * directionalLight;
+    rgb += directionalLightSpecular;
+  }
+  return rgb;
+}
+/* lights shading functions ends */
+
+/* material shading functions starts */
+vec3 marbleMaterial(vec3 surfacePoint, vec3 textureOffset) {
+  // texture animation
+  float sphereMaterialTextureAnimRadius = sphereMaterialTextureAnimBaseRadius + sphereMaterialTextureAnimAmplitude * sin(adjustedTime);
+  vec3 sphereMaterialTextureAnimNoisePoint = surfacePoint * sphereMaterialTextureAnimNoiseSpaceScale + textureOffset;
+  vec3 sphereMaterialTextureAnimNoise3D = vec3(turbulence(sphereMaterialTextureAnimNoisePoint, detailsLevel));
+  vec3 sphereMaterialTextureAnimOffset3D = sphereMaterialTextureAnimRadius * sphereMaterialTextureAnimNoise3D;
+  surfacePoint += vec3(sphereMaterialTextureAnimOffset3D);
+  // material color
+  vec3 sphereMaterialTextureNoisePoint = surfacePoint * sphereMaterialTextureNoiseSpaceScale + textureOffset;
+  float turbulenceAmount = sqrt(turbulence(sphereMaterialTextureNoisePoint * sphereMaterialTextureNoiseDetails, detailsLevel));
+  vec3 sphereMaterialTexture = vec3(pow(turbulenceAmount, 2.), pow(turbulenceAmount, 1.), pow(turbulenceAmount, 3.)) * sphereMaterialTextureNoiseIntensity;
+  vec3 rgb = sphereMaterialColor + sphereMaterialTexture;
+  return rgb;
+}
+
+vec3 waterMaterial(vec3 surfacePoint, vec3 textureOffset) {
+  // texture animation
+  float planeTextureAnimRadius = planeTextureAnimBaseRadius + planeTextureAnimAmplitude * sin(adjustedTime);
+  vec3 planeTextureAnimNoisePoint = surfacePoint * planeTextureAnimNoiseSpaceScale + textureOffset;
+  vec3 planeTextureAnimNoise3D = vec3(turbulence(planeTextureAnimNoisePoint, detailsLevel));
+  vec3 planeTextureAnimOffset3D = planeTextureAnimRadius * planeTextureAnimNoise3D;
+  surfacePoint += vec3(planeTextureAnimOffset3D);
+  // material color
+  vec3 planeMaterialTextureNoisePoint = surfacePoint * planeMaterialTextureNoiseSpaceScale;
+  planeMaterialTextureNoisePoint.y += adjustedTime / 4.;
+  float turbulenceAmount = sqrt(turbulence(planeMaterialTextureNoisePoint * planeMaterialTextureNoiseDetails, detailsLevel));
+  vec3 planeMaterialTexture = vec3(turbulenceAmount) * planeMaterialTextureNoiseIntensity;
+  vec3 rgb = planeMaterialColor + planeMaterialTexture;
+  return rgb;
+}
+/* material shading functions ends */
+
+/* refraction helper functions starts */
+vec3 refractedSphereSurfaceShading(vec3 sourcePosition, vec3 rayDirection, vec3 sphereCenter, float sphereRadius, float rayCloserIntersectionDistance, int i) {
+  vec3 sphereSurfacePoint = sourcePosition + rayCloserIntersectionDistance * rayDirection;
+  vec3 sphereSurfacePointRelative = sphereSurfacePoint - sphereCenter;
+
+  // rotation
+  float rotationOffset = float(i) / float(${NSPHERES}) * PI;
+  vec3 rotationAngle = vec3(
+    (adjustedTime + rotationOffset) * (mod(float(i + 0), 3.)),
+    (adjustedTime + rotationOffset) * (mod(float(i + 1), 3.)),
+    (adjustedTime + rotationOffset) * (mod(float(i + 2), 3.))
+  );
+  sphereSurfacePointRelative *= rotationMatrix(rotationAngle);
+
+  // material
+  vec3 textureNoiseSpaceOffset = vec3(float(i) * 1000.); // for different material between each sphere
+  vec3 sphereRGB = marbleMaterial(sphereSurfacePointRelative, textureNoiseSpaceOffset);
+
+  // lights
+  vec3 sphereNormal = normalize(sphereSurfacePoint - sphereCenter);
+  vec3 reflection = rayDirection - 2. * sphereNormal * dot(sphereNormal, rayDirection);
+  sphereRGB = lightsShading(sphereRGB, sphereNormal, reflection, sphereMaterialHighlightPower);
+  
+  return sphereRGB;
+}
+
+vec3 refractedSpheresShading(vec3 rgb, vec3 sourcePosition, vec3 rayDirection, int refractionSourceIndex) {
+  float closestRaySphereIntersectionDistance = 1000.;
+  float sphereRadiusOffset = 0.;
+  
+  vec3 refractionSourceRGB = rgb;
+  for (int i = 0; i < ${NSPHERES}; i++) {
+    vec3 sphereCenter = uSpheres[i].xyz;
+    float sphereRadius = uSpheres[i].w + sphereRadiusOffset;
+
+    float rayCloserIntersectionDistance = raySphereIntersectionDistance(sourcePosition, rayDirection, sphereCenter, sphereRadius, -1.);
+    if (rayCloserIntersectionDistance > 0. && rayCloserIntersectionDistance < closestRaySphereIntersectionDistance) {
+      closestRaySphereIntersectionDistance = rayCloserIntersectionDistance;
+      vec3 sphereRGB = refractedSphereSurfaceShading(sourcePosition, rayDirection, sphereCenter, sphereRadius, rayCloserIntersectionDistance, i);
+      if (i == refractionSourceIndex) {
+        refractionSourceRGB = sphereRGB;
+      } else {
+        rgb = sphereRGB;
+      }
+    }
+  }
+  rgb = mix(rgb, refractionSourceRGB, 0.99);
+  return rgb;
+}
+
+vec3 refractedPlaneShading(vec3 rgb, vec3 sourcePosition, vec3 rayDirection) {
+  vec4 sourcePosition4D = vec4(sourcePosition, 1.);
+  vec4 rayDirection4D = vec4(rayDirection, 0.);
+  float rayPlaneIntersectionDirection = dot(plane, rayDirection4D);
+  
+  float rayPlaneIntersectionDistance = rayPlaneIntersectionDistance(sourcePosition, rayDirection, plane);
+  if (rayPlaneIntersectionDirection < 0. && rayPlaneIntersectionDistance < maxRenderingDistance) {
+    vec3 planeSurfacePoint = sourcePosition + rayPlaneIntersectionDistance * rayDirection;
+    
+    float planeTurbulence = sqrt(turbulence(vec3(planeSurfacePoint.xz*4., adjustedTime), detailsLevel));
+    planeSurfacePoint.y += planeSurfaceTurbulenceAmplitude * (planeTurbulence * planeTurbulence - .5);
+    
+    vec3 planeNormal = normalize(plane.xyz);
+    vec3 planeReflectionRayDirection = rayDirection - 2. * planeNormal * dot(planeNormal, rayDirection);
+    vec3 planeSurfacePointRelative = planeSurfacePoint - vec3(0.);
+    
+    vec3 planeRGB = waterMaterial(planeSurfacePointRelative, vec3(0.));
+    
+    // lights
+    planeRGB = lightsShading(planeRGB, planeNormal, planeReflectionRayDirection, planeMaterialHighlightPower);
+    
+    // move surface point towards reflection by a tiny bit to avoid accidentally intersecting with the surface itself
+    vec3 reflectionPosition = planeSurfacePoint + .001 * planeReflectionRayDirection;
+    // reflection of sphere on plane starts
+    vec3 sphereRGB = refractedSpheresShading(planeRGB, reflectionPosition, planeReflectionRayDirection, -1);
+    rgb = mix(planeRGB, sphereRGB, planeReflectiveness);
+    // reflection of sphere on plane stops
+  }
+  return rgb;
+}
+/* refraction helper functions ends */
+
+/* surface shading functions starts */
+vec3 sphereSurfaceShading(vec3 sourcePosition, vec3 rayDirection, vec3 sphereCenter, float sphereRadius, float rayCloserIntersectionDistance, int i) {
+  vec3 sphereSurfacePoint = sourcePosition + rayCloserIntersectionDistance * rayDirection;
+  vec3 sphereSurfacePointRelative = sphereSurfacePoint - sphereCenter;
+
+  // rotation
+  float rotationOffset = float(i) / float(${NSPHERES}) * PI;
+  vec3 rotationAngle = vec3(
+    (adjustedTime + rotationOffset) * (mod(float(i + 0), 3.)),
+    (adjustedTime + rotationOffset) * (mod(float(i + 1), 3.)),
+    (adjustedTime + rotationOffset) * (mod(float(i + 2), 3.))
+  );
+  sphereSurfacePointRelative *= rotationMatrix(rotationAngle);
+
+  // material
+  vec3 textureNoiseSpaceOffset = vec3(float(i) * 1000.); // for different material between each sphere
+  vec3 sphereRGB = marbleMaterial(sphereSurfacePointRelative, textureNoiseSpaceOffset);
+
+  // lights
+  vec3 sphereNormal = normalize(sphereSurfacePoint - sphereCenter);
+  vec3 reflection = rayDirection - 2. * sphereNormal * dot(sphereNormal, rayDirection);
+  sphereRGB = lightsShading(sphereRGB, sphereNormal, reflection, sphereMaterialHighlightPower);
+  
+  // refractions
+  vec3 enteringCos = dot(sphereNormal, rayDirection) * sphereNormal;
+  vec3 enteringSin = rayDirection - enteringCos;
+  vec3 enteredSin = enteringSin * airRefractiveIndex / sphereRefractiveIndex;
+  vec3 enteredCos = - sqrt(1. - enteredSin * enteredSin) * sphereNormal;
+  vec3 enteredRayDirection = enteredCos + enteredSin;
+  
+  vec3 sphereEnteredPoint = sphereSurfacePoint + 0.00001 * enteredRayDirection;
+  float rayFartherDistance = raySphereIntersectionDistance(sphereEnteredPoint, enteredRayDirection, sphereCenter, sphereRadius, 1.);
+  vec3 sphereSurfaceExitingPoint = sphereEnteredPoint + rayFartherDistance * enteredRayDirection;
+  vec3 sphereExitingNormal = normalize(sphereSurfaceExitingPoint - sphereCenter);
+  vec3 exitingCos = dot(sphereExitingNormal, enteredRayDirection) * sphereExitingNormal;
+  vec3 exitingSin = enteredRayDirection - exitingCos;
+  vec3 exitedSin = exitingSin * sphereRefractiveIndex / airRefractiveIndex;
+  vec3 exitedCos = - sqrt(1. - exitedSin * exitedSin) * sphereExitingNormal;
+  vec3 exitedRayDirection = exitedCos + exitedSin;
+  
+  vec3 sphereExitedPoint = sphereSurfaceExitingPoint + 0.00001 * exitedRayDirection;
+  
+  vec3 refractedPlaneRGB = refractedPlaneShading(sphereRGB, sphereExitedPoint, exitedRayDirection);
+  sphereRGB = mix(sphereRGB, refractedPlaneRGB, sphereTransparency);
+  vec3 refractedSpheresRGB = refractedSpheresShading(sphereRGB, sphereExitedPoint, exitedRayDirection, i);
+  sphereRGB = mix(sphereRGB, refractedSpheresRGB, sphereTransparency);
+  
+  return sphereRGB;
+}
+
+vec3 spheresShading(vec3 rgb, vec3 sourcePosition, vec3 rayDirection) {
+  float closestRaySphereIntersectionDistance = 1000.;
+  float sphereRadiusOffset = 0.;
+  // float sphereRadiusOffset = 0.02*noise(vec3(vPos.xyz*32.));
+  for (int i = 0; i < ${NSPHERES}; i++) {
+    vec3 sphereCenter = uSpheres[i].xyz;
+    float sphereRadius = uSpheres[i].w + sphereRadiusOffset;
+    
+    float rayCloserIntersectionDistance = raySphereIntersectionDistance(sourcePosition, rayDirection, sphereCenter, sphereRadius, -1.);
+    if (rayCloserIntersectionDistance > 0. && rayCloserIntersectionDistance < closestRaySphereIntersectionDistance) {
+      closestRaySphereIntersectionDistance = rayCloserIntersectionDistance;
+      vec3 sphereRGB = sphereSurfaceShading(sourcePosition, rayDirection, sphereCenter, sphereRadius, rayCloserIntersectionDistance, i);
+      rgb = sphereRGB;
+    }
+  }
+  return rgb;
+}
+
+vec3 planeShading(vec3 rgb, vec3 sourcePosition, vec3 rayDirection) {
+  vec4 sourcePosition4D = vec4(sourcePosition, 1.);
+  vec4 rayDirection4D = vec4(rayDirection, 0.);
+  float rayPlaneIntersectionDirection = dot(plane, rayDirection4D);
+  
+  float rayPlaneIntersectionDistance = rayPlaneIntersectionDistance(sourcePosition, rayDirection, plane);
+  if (rayPlaneIntersectionDirection < 0. && rayPlaneIntersectionDistance < maxRenderingDistance) {
+    vec3 planeSurfacePoint = sourcePosition + rayPlaneIntersectionDistance * rayDirection;
+    
+    float planeTurbulence = sqrt(turbulence(vec3(planeSurfacePoint.xz*4., adjustedTime), detailsLevel));
+    planeSurfacePoint.y += planeSurfaceTurbulenceAmplitude * (planeTurbulence * planeTurbulence - .5);
+    
+    vec3 planeNormal = normalize(plane.xyz);
+    vec3 planeReflectionRayDirection = rayDirection - 2. * planeNormal * dot(planeNormal, rayDirection);
+    vec3 planeSurfacePointRelative = planeSurfacePoint - vec3(0.);
+    
+    vec3 planeRGB = waterMaterial(planeSurfacePointRelative, vec3(0.));
+    
+    // lights
+    planeRGB = lightsShading(planeRGB, planeNormal, planeReflectionRayDirection, planeMaterialHighlightPower);
+    
+    // move surface point towards reflection by a tiny bit to avoid accidentally intersecting with the surface itself
+    vec3 reflectionPosition = planeSurfacePoint + .001 * planeReflectionRayDirection;
+    // reflection of sphere on plane starts
+    vec3 sphereRGB = spheresShading(planeRGB, reflectionPosition, planeReflectionRayDirection);
+    rgb = mix(planeRGB, sphereRGB, planeReflectiveness);
+    // reflection of sphere on plane stops
+  }
+  return rgb;
+}
+/* surface shading functions starts */
+
+/* shading functions ends */
+
+void main(void) {
+  /* light parameters starts */
+  // key light
+  directionalLightDirections[0] = normalize(vec3(.0, .5, -.5));
+  directionalLightIntensities[0] = .6;
+  directionalLightColors[0] = directionalLightIntensities[0] * normalize(vec3(ambientLightColor));
+  // fill light
+  directionalLightDirections[1] = normalize(vec3(0., -.5, -.5));
+  directionalLightIntensities[1] = .3;
+  directionalLightColors[1] = directionalLightIntensities[1] * normalize(vec3(ambientLightColor));
+  /* light parameters ends */
+  
+  /* camera starts */
+  vec4 pos = vec4(vPos, 1.);
+  pos.xy *= uResolution / min(uResolution.x, uResolution.y);
+  pos.xyz += cameraViewOffset * cameraZoom;
+  pos.xyz *= 1. / cameraZoom;
+  vec3 cameraRayDirection = normalize(vec3(pos.xy, -uFocalLength));
+  /* camera stops */
+  
+  /* background shading starts */
+  vec3 rgb = mix(gradientColorBottom, gradientColorTop, gradientIntensity * cameraZoom * pos.y);
+  /* background shading ends */
+  
+  /* plane shading starts */
+  rgb = planeShading(rgb, cameraPosition, cameraRayDirection);
+  /* plane shading ends */
+  
+  /* spheres shading starts */
+  rgb = spheresShading(rgb, cameraPosition, cameraRayDirection);
+  /* spheres shading ends */
+  
+  /* post processing starts */
+  rgb += overallColorTint * colorTintAnimMatrix;
+  /* post processing ends */
+  
+  gl_FragColor = vec4(sqrt(rgb), 1.0);
+}
+`;
+
+      // WAIT 100 MSECS BEFORE STARTING UP
+
+      setTimeout(() => {
+        let gl = start_gl(canvas1, meshData, vertexSize, vertexShader, fragmentShader);
+
+        // FIND LOCATIONS IN GPU PROGRAM OF UNIFORM VARIABLES
+
+        let uFocalLength = gl.getUniformLocation(gl.program, "uFocalLength");
+        let uTime = gl.getUniformLocation(gl.program, "uTime");
+        let uCursor = gl.getUniformLocation(gl.program, "uCursor");
+        let uSpheres = gl.getUniformLocation(gl.program, "uSpheres");
+        let uResolution = gl.getUniformLocation(gl.program, "uResolution");
+
+        // ANIMATE AND RENDER EACH ANIMATION FRAME
+
+        let startTime = Date.now() / 1000;
+        setInterval(() => {
+          // SET ALL UNIFORM VARIABLES
+
+          let time = Date.now() / 1000 - startTime;
+          gl.uniform1f(uTime, time);
+          gl.uniform2fv(uResolution, [canvas1.width, canvas1.height]);
+          gl.uniform3fv(uCursor, cursor);
+          gl.uniform1f(uFocalLength, 2.5);
+
+          //const animAngleOffset = (frameCount / loopFramesNum) * Math.PI * 2;
+          const animAngleOffset = time * 0.2;
+          let data = [];
+          for (let i = 0; i < NSPHERES; i++) {
+            const offsetX = 0;
+            const offsetY = -0.8;
+            const offsetZ = 3;
+            const zAmplitude = 0;
+            const frequency = 1;
+            const animFactor = 4;
+            const r = 0.25;
+            const movementRadius = 0.3;
+            const theta = animAngleOffset + (2 * Math.PI * i) / NSPHERES;
+            const sphereVector = [0, 0, 0, 1];
+            const matrix = new Matrix();
+            matrix.rotateY(theta);
+            matrix.translate(0, 0, movementRadius);
+            const vector = matrix.transform(sphereVector);
+            data.push(vector[0] + offsetX, vector[1] + offsetY, vector[2] + offsetZ, -r / vector[3]);
+          }
+
+          gl.uniform4fv(uSpheres, data);
+
+          // RENDER THE FRAME
+
+          for (let n = 0; n < meshData.length; n++) {
+            let mesh = meshData[n].mesh;
+            gl.bufferData(gl.ARRAY_BUFFER, mesh, gl.STATIC_DRAW);
+            gl.drawArrays(meshData[n].type ? gl.TRIANGLE_STRIP : gl.TRIANGLES, 0, mesh.length / vertexSize);
+          }
+        }, 30);
+      }, 100);
+    </script>
+  </center>
+</body>
