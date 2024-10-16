@@ -1,0 +1,177 @@
+<body bgcolor="black">
+  <script src="fragmentShader.js"></script>
+  <script src="matrix.js"></script>
+  <script src="quadric.js"></script>
+
+  <center>
+    <div style="color: #b0b0b0; font-family: arial, sans-serif">
+      <h1>Jack's Homework #4</h1>
+      <p>[ <a style="color: #fff" href="https://jackbdu.com/computer-graphics/">Home</a> | <a style="color: #fff" href="https://github.com/jackbdu/computer-graphics/tree/main/hw4">Source Code</a> ]</p>
+    </div>
+    <canvas id="canvas1" width="800" height="600"></canvas>
+
+    <script>
+      let vertexSize = 3;
+      let vertexShader = `
+         attribute vec3 aPos;
+         varying   vec3 vPos;
+         void main() {
+            gl_Position = vec4(aPos, 1.0);
+            vPos = aPos;
+         }
+      `;
+      let fragmentShaderMacros = `
+        #define DIRECTIONAL_LIGHTS_NUM 2
+        #define OBJECTS_NUM 11
+      `;
+
+      // INITIALIZE GPU PROGRAM
+
+      let start_gl = (canvas, meshData, vertexSize, vertexShader, fragmentShader) => {
+        let gl = canvas.getContext("webgl");
+        let program = gl.createProgram();
+        gl.program = program;
+        let addshader = (type, src) => {
+          let shader = gl.createShader(type);
+          gl.shaderSource(shader, src);
+          gl.compileShader(shader);
+          if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw "Cannot compile shader:\n\n" + gl.getShaderInfoLog(shader);
+          gl.attachShader(program, shader);
+        };
+        addshader(gl.VERTEX_SHADER, vertexShader);
+        addshader(gl.FRAGMENT_SHADER, fragmentShader);
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw "Could not link the shader program!";
+        gl.useProgram(program);
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LEQUAL);
+        let vertexAttribute = (name, size, position) => {
+          let attr = gl.getAttribLocation(program, name);
+          gl.enableVertexAttribArray(attr);
+          gl.vertexAttribPointer(attr, size, gl.FLOAT, false, vertexSize * 4, position * 4);
+        };
+        vertexAttribute("aPos", 3, 0);
+        return gl;
+      };
+
+      // LOGIC TO TRACK THE CURSOR
+
+      let r = canvas1.getBoundingClientRect(),
+        cursor = [0, 0, 0];
+      let setCursor = (e, z) => (cursor = [((e.clientX - r.left) / canvas1.width) * 2 - 1, 1 - ((e.clientY - r.top) / canvas1.height) * 2, z !== undefined ? z : cursor[2]]);
+      canvas1.onmousedown = (e) => setCursor(e, 1);
+      canvas1.onmousemove = (e) => setCursor(e);
+      canvas1.onmouseup = (e) => setCursor(e, 0);
+
+      // TRIANGLE DATA (IN THIS CASE, ONE SQUARE)
+
+      let meshData = [{ type: 1, mesh: new Float32Array([-1, 1, 0, 1, 1, 0, -1, -1, 0, 1, -1, 0]) }];
+
+      // DEFINE A MATRIX INVERSE FUNCTION
+
+      setTimeout(() => {
+        let gl = start_gl(canvas1, meshData, vertexSize, vertexShader, fragmentShaderMacros + fragmentShader);
+
+        // FIND LOCATIONS IN GPU PROGRAM OF UNIFORM VARIABLES
+
+        let uResolution = gl.getUniformLocation(gl.program, "uResolution");
+        let uFocalLength = gl.getUniformLocation(gl.program, "uFocalLength");
+        let uTime = gl.getUniformLocation(gl.program, "uTime");
+        let uCursor = gl.getUniformLocation(gl.program, "uCursor");
+        let uAmbientLight = gl.getUniformLocation(gl.program, "uAmbientLight");
+        let uDirectionalLights = gl.getUniformLocation(gl.program, "uDirectionalLights");
+        let uMaterialVectors = gl.getUniformLocation(gl.program, "uMaterialVectors");
+        let uShapeAMatrices = gl.getUniformLocation(gl.program, "uShapeAMatrices");
+        let uShapeBMatrices = gl.getUniformLocation(gl.program, "uShapeBMatrices");
+        let uShapeCMatrices = gl.getUniformLocation(gl.program, "uShapeCMatrices");
+        let uTransformationMatrix = gl.getUniformLocation(gl.program, "uTransformationMatrix");
+
+        // ANIMATE AND RENDER EACH ANIMATION FRAME
+
+        let startTime = Date.now() / 1000;
+        setInterval(() => {
+          let time = Date.now() / 1000 - startTime;
+
+          // DEFINE ANIMATION MATRICES
+
+          // const animAngleOffset = (frameCount / loopFramesNum) * Math.PI * 2;
+          const animAngleOffset = time / 8;
+
+          const shapeAMatrices = [];
+          const shapeBMatrices = [];
+          const shapeCMatrices = [];
+          const materialVectors = [];
+          const directionalLights = [];
+          const lensesNum = 10;
+
+          // default values
+          let ambientLight = [0, 0, 0];
+          let material = [0, 0, 0, 0];
+
+          const setMaterial = (a, b, c, d) => {
+            material = [a, b, c, d];
+          };
+
+          const setAmbientLight = (r, g, b) => {
+            ambientLight = [r, g, b];
+          };
+
+          const addDirectionalLight = (r, g, b, x, y, z) => {
+            directionalLights.push([r, g, b, x, y, z]);
+          };
+
+          const addShape = (matrix, a, b, c) => {
+            shapeAMatrices.push(transform(a, matrix));
+            shapeBMatrices.push(transform(b === undefined ? everywhere : b, matrix));
+            shapeCMatrices.push(transform(c === undefined ? everywhere : c, matrix));
+            materialVectors.push(material ?? [0, 0, 0, 0]);
+          };
+
+          const gemTransformation = multiply(translation(0, 0, 0), multiply(rotationY(animAngleOffset), multiply(rotationZ(animAngleOffset), scale(2, 2, 2))));
+
+          setAmbientLight(0.05, 0.05, 0.05);
+          addDirectionalLight(0.8, 0.8, 0.8, 1, 1, 1);
+          addDirectionalLight(0.5, 0.5, 0.5, -1, -1, -1);
+
+          setMaterial(0, 0, 0, 1);
+          addShape(gemTransformation, xCylinder, yCylinder, zCylinder);
+          setMaterial(0, 0, 0, 0);
+          for (let i = 0; i < lensesNum; i++) {
+            const rotationOffset = (i / lensesNum) * 2 * Math.PI;
+            const angle = animAngleOffset;
+            const lensTransformation = multiply(rotationY(angle + rotationOffset), multiply(translation(0, 0, 5), multiply(rotationX(angle + rotationOffset * 2), scale(1.5, 1.5, 0.6 + 0.4 * Math.sin(rotationOffset)))));
+            addShape(lensTransformation, sphere);
+          }
+
+          // SET UNFIROM VARIABLES
+
+          gl.uniform1f(uTime, time);
+          gl.uniform3fv(uCursor, cursor);
+          gl.uniform1f(uFocalLength, 2.5);
+
+          gl.uniform2fv(uResolution, [canvas1.width, canvas1.height]);
+          gl.uniform3fv(uAmbientLight, ambientLight);
+
+          gl.uniform3fv(uDirectionalLights, directionalLights.flat());
+          gl.uniform4fv(uMaterialVectors, materialVectors.flat());
+          gl.uniformMatrix4fv(uTransformationMatrix, false, gemTransformation);
+
+          // SEND QUADRIC DATA TO THE FRAGMENT SHADER
+
+          gl.uniformMatrix4fv(uShapeAMatrices, false, shapeAMatrices.flat());
+          gl.uniformMatrix4fv(uShapeBMatrices, false, shapeBMatrices.flat());
+          gl.uniformMatrix4fv(uShapeCMatrices, false, shapeCMatrices.flat());
+
+          // RENDER THE FRAME
+
+          for (let n = 0; n < meshData.length; n++) {
+            let mesh = meshData[n].mesh;
+            gl.bufferData(gl.ARRAY_BUFFER, mesh, gl.STATIC_DRAW);
+            gl.drawArrays(meshData[n].type ? gl.TRIANGLE_STRIP : gl.TRIANGLES, 0, mesh.length / vertexSize);
+          }
+        }, 30);
+      }, 100);
+    </script>
+  </center>
+</body>
