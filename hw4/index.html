@@ -6,7 +6,7 @@
   <center>
     <div style="color: #b0b0b0; font-family: arial, sans-serif">
       <h1>Jack's Homework #4</h1>
-      <p>[ <a style="color: #fff" href="https://jackbdu.com/computer-graphics/">Home</a> | <a style="color: #fff" href="https://github.com/jackbdu/computer-graphics/tree/main/hw4">Source Code</a> ]</p>
+      <p>[ <a style="color: #fff" href="https://jackbdu.com/computer-graphics/">Home</a> | <a style="color: #fff" href="https://github.com/jackbdu/computer-graphics/tree/main/hw4">Source Code</a> | <a style="color: #fff" href="https://www.instagram.com/p/DAF4ghvRg-O/">Video</a> ]</p>
     </div>
     <canvas id="canvas1" width="800" height="600"></canvas>
 
@@ -135,7 +135,9 @@
           addDirectionalLight(0.5, 0.5, 0.5, -1, -1, -1);
 
           setMaterial(0, 0, 0, 1);
-          addShape(gemTransformation, xCylinder, yCylinder, zCylinder);
+          //addShape(gemTransformation, xCylinder, yCylinder, zCylinder);
+          addShape(gemTransformation, xSlab, ySlab, zSlab);
+          /*
           setMaterial(0, 0, 0, 0);
           for (let i = 0; i < lensesNum; i++) {
             const rotationOffset = (i / lensesNum) * 2 * Math.PI;
@@ -143,6 +145,7 @@
             const lensTransformation = multiply(rotationY(angle + rotationOffset), multiply(translation(0, 0, 5), multiply(rotationX(angle + rotationOffset * 2), scale(1.5, 1.5, 0.6 + 0.4 * Math.sin(rotationOffset)))));
             addShape(lensTransformation, sphere);
           }
+          */
 
           // SET UNFIROM VARIABLES
 
