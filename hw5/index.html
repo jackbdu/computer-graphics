@@ -1,0 +1,463 @@
+<body bgcolor="black">
+  <center>
+    <div style="color: #b0b0b0; font-family: arial, sans-serif">
+      <h1>Jack's Homework #5</h1>
+      <p>[ <a style="color: #fff" href="https://jackbdu.com/computer-graphics/">Home</a> | <a style="color: #fff" href="https://github.com/jackbdu/computer-graphics/tree/main/hw5">Source Code</a> ]</p>
+    </div>
+    <canvas id="canvas1" width="1240" height="720"></canvas>
+    <script>
+      // A TINY MATRIX LIBRARY
+
+      let mInverse = (m) => {
+        let dst = [],
+          det = 0,
+          cofactor = (c, r) => {
+            let s = (i, j) => m[((c + i) & 3) | (((r + j) & 3) << 2)];
+            return ((c + r) & 1 ? -1 : 1) * (s(1, 1) * (s(2, 2) * s(3, 3) - s(3, 2) * s(2, 3)) - s(2, 1) * (s(1, 2) * s(3, 3) - s(3, 2) * s(1, 3)) + s(3, 1) * (s(1, 2) * s(2, 3) - s(2, 2) * s(1, 3)));
+          };
+        for (let n = 0; n < 16; n++) dst.push(cofactor(n >> 2, n & 3));
+        for (let n = 0; n < 4; n++) det += m[n] * dst[n << 2];
+        for (let n = 0; n < 16; n++) dst[n] /= det;
+        return dst;
+      };
+      let matrixMultiply = (a, b) => {
+        let dst = [];
+        for (let n = 0; n < 16; n++) dst.push(a[n & 3] * b[n & 12] + a[(n & 3) | 4] * b[(n & 12) | 1] + a[(n & 3) | 8] * b[(n & 12) | 2] + a[(n & 3) | 12] * b[(n & 12) | 3]);
+        return dst;
+      };
+      let C = (t) => Math.cos(t);
+      let S = (t) => Math.sin(t);
+      let mIdentity = () => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+      let mPerspective = (fl, m) => matrixMultiply(m, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, -1 / fl, 0, 0, 0, 1]);
+      let mRotateX = (t, m) => matrixMultiply(m, [1, 0, 0, 0, 0, C(t), S(t), 0, 0, -S(t), C(t), 0, 0, 0, 0, 1]);
+      let mRotateY = (t, m) => matrixMultiply(m, [C(t), 0, -S(t), 0, 0, 1, 0, 0, S(t), 0, C(t), 0, 0, 0, 0, 1]);
+      let mRotateZ = (t, m) => matrixMultiply(m, [C(t), S(t), 0, 0, -S(t), C(t), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+      let mScale = (x, y, z, m) => matrixMultiply(m, [x, 0, 0, 0, 0, y, 0, 0, 0, 0, z, 0, 0, 0, 0, 1]);
+      let mTranslate = (x, y, z, m) => matrixMultiply(m, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1]);
+
+      // INITIALIZE GL
+
+      let start_gl = (canvas, meshData, vertexSize, vertexShader, fragmentShader) => {
+        let gl = canvas.getContext("webgl");
+        let program = gl.createProgram();
+        gl.program = program;
+        let addshader = (type, src) => {
+          let shader = gl.createShader(type);
+          gl.shaderSource(shader, src);
+          gl.compileShader(shader);
+          if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw "Cannot compile shader:\n\n" + gl.getShaderInfoLog(shader);
+          gl.attachShader(program, shader);
+        };
+        addshader(gl.VERTEX_SHADER, vertexShader);
+        addshader(gl.FRAGMENT_SHADER, fragmentShader);
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw "Could not link the shader program!";
+        gl.useProgram(program);
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LEQUAL);
+        let vertexAttribute = (name, size, position) => {
+          let attr = gl.getAttribLocation(program, name);
+          gl.enableVertexAttribArray(attr);
+          gl.vertexAttribPointer(attr, size, gl.FLOAT, false, vertexSize * 4, position * 4);
+        };
+        vertexAttribute("aPos", 3, 0);
+        vertexAttribute("aNor", 3, 3);
+        return gl;
+      };
+
+      //CREATE A TRIANGLE_STRIP MESH
+
+      let createMesh = (nu, nv, p) => {
+        let mesh = [];
+        for (let j = nv - 1; j >= 0; j--) {
+          for (let i = 0; i <= nu; i++) mesh.push(p(i / nu, (j + 1) / nv), p(i / nu, j / nv));
+          mesh.push(p(1, j / nv), p(0, j / nv));
+        }
+        return mesh.flat();
+      };
+
+      // DEFINE VARIOUS KINDS OF TRIANGLE_STRIP MESHES
+
+      let customGeometry = (nu, nv) =>
+        createMesh(nu, nv, (u, v) => {
+          let theta = 2 * Math.PI * u;
+          let phi = Math.PI * (v - 0.5);
+          let x = C(phi) * C(theta);
+          let y = C(phi) * S(theta);
+          let z = 0.7 * S(phi) + 0.3 * S(theta * 4);
+          return [x, y, z, x, y, z];
+        });
+
+      let sphere = (nu, nv) =>
+        createMesh(nu, nv, (u, v) => {
+          let theta = 2 * Math.PI * u;
+          let phi = Math.PI * (v - 0.5);
+          let x = C(phi) * C(theta),
+            y = C(phi) * S(theta),
+            z = S(phi);
+          return [x, y, z, x, y, z];
+        });
+
+      let tube = (nu, nv) =>
+        createMesh(nu, nv, (u, v) => {
+          let x = C(2 * Math.PI * u),
+            y = S(2 * Math.PI * u),
+            z = 2 * v - 1;
+          return [x, y, z, x, y, 0];
+        });
+
+      let disk = (nu, nv) =>
+        createMesh(nu, nv, (u, v) => {
+          let x = v * C(2 * Math.PI * u),
+            y = v * S(2 * Math.PI * u);
+          return [x, y, 0, 0, 0, 1];
+        });
+
+      let cylinder = (nu, nv) =>
+        createMesh(nu, nv, (u, v) => {
+          let x = C(2 * Math.PI * u),
+            y = S(2 * Math.PI * u);
+          switch ((5 * v) >> 0) {
+            case 0:
+              return [0, 0, -1, 0, 0, -1];
+            case 1:
+              return [x, y, -1, 0, 0, -1];
+            case 2:
+              return [x, y, -1, x, y, 0];
+            case 3:
+              return [x, y, 1, x, y, 0];
+            case 4:
+              return [x, y, 1, 0, 0, 1];
+            case 5:
+              return [0, 0, 1, 0, 0, 1];
+          }
+        });
+
+      let torus = (nu, nv) =>
+        createMesh(nu, nv, (u, v) => {
+          let ct = C(2 * Math.PI * u);
+          let st = S(2 * Math.PI * u);
+          let cp = C(2 * Math.PI * v);
+          let sp = S(2 * Math.PI * v);
+          let x = (1 + 0.5 * cp) * ct,
+            y = (1 + 0.5 * cp) * st,
+            z = 0.5 * sp;
+          return [x, y, z, cp * ct, cp * st, sp];
+        });
+
+      // SHORTCUT TO MAKE IT EASIER TO DEFINE CUBE AND OCTAHEDRON
+
+      let strToTris = (str) => {
+        let tris = [];
+        for (let n = 0; n < str.length; n++)
+          switch (str.charAt(n)) {
+            case "N":
+              tris.push(-1);
+              break;
+            case "n":
+              tris.push(-0.577);
+              break;
+            case "0":
+              tris.push(0);
+              break;
+            case "p":
+              tris.push(0.577);
+              break;
+            case "P":
+              tris.push(1);
+              break;
+          }
+        return tris;
+      };
+
+      // DEFINE SOME MESHES MADE FROM TRIANGLES
+
+      let cube = strToTris(`PNP00P PPP00P NPP00P  NPP00P NNP00P PNP00P
+                                  NPN00N PPN00N PNN00N  PNN00N NNN00N NPN00N
+                                  PPNP00 PPPP00 PNPP00  PNPP00 PNNP00 PPNP00
+                                  NNPN00 NPPN00 NPNN00  NPNN00 NNNN00 NNPN00
+                                  NPP0P0 PPP0P0 PPN0P0  PPN0P0 NPN0P0 NPP0P0
+                                  PNN0N0 PNP0N0 NNP0N0  NNP0N0 NNN0N0 PNN0N0`);
+
+      let octahedron = strToTris(`00Nnnn 0N0nnn N00nnn  P00pnn 0N0pnn 00Npnn
+                                        N00npn 0P0npn 00Nnpn  00Nppn 0P0ppn P00ppn
+                                        00Pnnp 0N0nnp N00nnp  00Ppnp 0N0pnp P00pnp
+                                        N00npp 0P0npp 00Pnpp  P00ppp 0P0ppp 00Pppp`);
+
+      // DEFINE ALL THE OBJECT COLORS AND SHAPES
+
+      const meshMakers = [
+        {
+          type: 1,
+          makeMesh: function (details) {
+            return new Float32Array(customGeometry(details, Math.floor(details / 2)));
+          },
+        },
+        {
+          type: 1,
+          makeMesh: function (details) {
+            return new Float32Array(sphere(details, Math.floor(details / 2)));
+          },
+        },
+        {
+          type: 1,
+          makeMesh: function (details) {
+            return new Float32Array(disk(details, 1));
+          },
+        },
+        {
+          type: 1,
+          makeMesh: function (details) {
+            return new Float32Array(cylinder(4, 6));
+          },
+        },
+        {
+          type: 1,
+          makeMesh: function (details) {
+            return new Float32Array(torus(details, details));
+          },
+        },
+        {
+          type: 0,
+          makeMesh: function (details) {
+            return new Float32Array(cube);
+          },
+        },
+        {
+          type: 0,
+          makeMesh: function (details) {
+            return new Float32Array(octahedron);
+          },
+        },
+      ];
+
+      // bitmpaps for skull and ghost emoji
+      const bitmapsString = `{
+        "data": [
+          [
+            0,  0,  0,  0,  0, 29, 57, 70, 71, 58, 32,  0,  0,  0,  0,  0,
+            0,  0,  0,  0, 45, 86,100,100,100,100, 88, 49,  0,  0,  0,  0,
+            0,  0,  0,  0, 83,100,100, 99,100,100,100, 88,  0,  0,  0,  0,
+           16,  0,  0, 44, 97,100, 99, 99, 89, 63,  0, 92, 50,  0,  0, 16,
+           68, 50,  0, 67, 64,  0, 85, 96, 32,  0,  0,  0, 72,  0, 50, 67,
+           86, 50,  0, 73, 48,  0, 77, 94, 18,  0,  0,  0, 76,  0, 47, 86,
+           83, 92, 70, 72, 86, 81, 93, 98, 60, 22,  0, 74, 74, 68, 91, 83,
+           63, 94, 87, 74, 85, 83, 85, 86, 86, 75, 74, 85, 73, 85, 94, 65,
+            0, 70, 78, 76, 74,  0,  0,  0,  0,  0,  0, 74, 76, 76, 70,  0,
+            0, 26, 55, 75, 92, 78, 50, 50, 50, 50, 77, 92, 76, 56, 30,  0,
+            0,  0, 39, 80, 85, 75, 50, 50, 50, 50, 76, 85, 81, 42,  0,  0,
+            0,  0, 53, 81, 78, 69, 50, 50, 50, 50, 69, 78, 81, 55,  0,  0,
+            0, 28, 74, 76, 66, 67, 68, 40, 40, 69, 66, 66, 78, 75, 28,  0,
+            0, 57, 78, 68, 58, 62, 72, 75, 75, 71, 61, 57, 68, 80, 59,  0,
+           35, 70, 66,  0, 30, 47, 64, 80, 79, 63, 47, 30,  0, 65, 71, 42,
+           29, 45,  0,  0,  0,  0, 30, 45, 46, 30,  0,  0,  0,  0, 43, 31
+          ],
+          [
+            0,  0,  0,  0,  0, 30, 58, 74, 77, 64, 39,  0,  0,  0,  0,  0,
+            0,  0,  0, 23, 66, 89, 93, 94, 95, 94, 92, 76, 37,  0,  0,  0,
+            0,  0, 32, 80, 91, 93, 97,100,100, 98, 94, 92, 89, 50,  0,  0,
+            0,  0, 68, 89, 92, 96, 98, 99, 99, 99, 96, 94, 90, 81,  0,  0,
+            0, 18, 81, 88, 97,100,100,100,100,100,100, 99, 90, 85, 20,  0,
+            0, 19, 81, 91, 96, 87, 89, 96, 97, 91, 86, 94, 94, 83, 18,  0,
+            0, 16, 78, 75, 34,  0,  0, 62, 77,  0,  0, 34, 65, 83, 19,  0,
+            0,  0, 69, 53,  0,  0,  0, 48, 69,  0,  0,  0, 33, 75,  0,  0,
+            0,  0, 53, 67, 28,  0,  0, 73, 89, 29,  0,  0, 55, 68,  0,  0,
+            0,  0, 38, 80, 58, 43, 70, 80, 76, 77, 47, 50, 85, 63,  0,  0,
+            0,  0, 16, 56, 72, 83, 93,  0,  0, 85, 89, 79, 68, 31,  0,  0,
+            0,  0,  0, 18, 23, 60, 80, 81, 81, 80, 70, 35, 18,  0,  0,  0,
+            0,  0,  0,  0, 20, 49,  0,  0,  0,  0, 63, 20,  0,  0,  0,  0,
+            0,  0,  0,  0,  0, 42, 50,  0,  0, 50, 61,  0,  0,  0,  0,  0,
+            0,  0,  0,  0,  0, 20, 76, 50, 50, 83, 38,  0,  0,  0,  0,  0,
+            0,  0,  0,  0,  0,  0, 37, 61, 64, 48,  0,  0,  0,  0,  0,  0
+          ]
+        ]
+      }`;
+      const bitmaps = JSON.parse(bitmapsString).data;
+
+      const details = 16;
+      const meshData = [];
+      const particleBaseSize = 1 / 16;
+      const particlesNum = 4096;
+      const bitmapResolution = 16;
+      const cubeSize = 1 / bitmapResolution;
+      const threshold = 0;
+
+      function dist3D(x1, y1, z1, x2, y2, z2) {
+        return Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2) + (z1 - z2) * (z1 - z2));
+      }
+
+      function maxTouchingDistance(size1, size2) {
+        return Math.sqrt((size1 / 2) * (size1 / 2) * 3) + Math.sqrt((size2 / 2) * (size2 / 2) * 3);
+      }
+
+      for (let i = 0; i < particlesNum; i++) {
+        const progress = i / (particlesNum - 1);
+        const angle = progress * Math.PI * 2;
+        const r = 0.5 + 0.5 * S(angle + 1);
+        const g = 0.5 + 0.5 * S(angle + 2);
+        const b = 0.5 + 0.5 * S(angle + 3);
+        const color = [r, g, b];
+        const pos = {};
+        const sizeDecrement = 0.05;
+        const minSize = 0.3;
+        let size = 0.6;
+        let positioningAttempts = 1000;
+        let overlapping = true;
+        while (overlapping && positioningAttempts-- > 0) {
+          pos.x = (Math.random() - 0.5) * 0.95;
+          pos.y = (Math.random() - 0.5) * 0.95;
+          pos.z = (Math.random() - 0.5) * 0.95;
+          overlapping = false;
+          for (x = -0.5; x < 0.5; x += cubeSize) {
+            for (y = -0.5; y < 0.5; y += cubeSize) {
+              for (z = -0.5; z < 0.5; z += cubeSize) {
+                const bitmapAIndex = Math.floor((x + 0.5 + (0.5 - y) * bitmapResolution) * bitmapResolution);
+                const bitmapAValue = bitmaps[0][bitmapAIndex];
+                const distanceA = dist3D(pos.x, pos.y, pos.z, x, y, z);
+
+                const bitmapBIndex = Math.floor((z + 0.5 + (0.5 - y) * bitmapResolution) * bitmapResolution);
+                const bitmapBValue = bitmaps[1][bitmapBIndex];
+                const distanceB = dist3D(pos.x, pos.y, pos.z, x, y, z);
+
+                let touchingDistance = Math.sqrt((cubeSize / 2) * (cubeSize / 2) * 3) + Math.sqrt((((cubeSize * size) / 2) * (cubeSize * size)) / 2);
+                let touching = (bitmapAValue <= threshold && distanceA <= touchingDistance) || (bitmapBValue <= threshold && distanceB <= touchingDistance);
+                while (size > minSize && touching) {
+                  size -= sizeDecrement;
+                  touchingDistance = maxTouchingDistance(cubeSize, cubeSize * size);
+                  touching = (bitmapAValue <= threshold && distanceA <= touchingDistance) || (bitmapBValue <= threshold && distanceB <= touchingDistance);
+                }
+                if (touching) overlapping = true;
+              }
+            }
+          }
+        }
+        const randomMeshMakerIndex = Math.floor(Math.random() * meshMakers.length);
+        const meshMaker = meshMakers[randomMeshMakerIndex];
+        const type = meshMaker.type;
+        const mesh = meshMaker.makeMesh(details);
+
+        const particle = {
+          type,
+          mesh,
+          color,
+          pos,
+          size,
+        };
+        meshData.push(particle);
+      }
+
+      // VERY SIMPLE VERTEX AND FRAGMENT SHADERS
+
+      let vertexSize = 6;
+      let vertexShader = `
+         attribute vec3 aPos, aNor;
+         uniform mat4 uMatrix, uInvMatrix;
+         uniform vec2 uResolution;
+         varying vec3 vPos, vNor;
+         void main() {
+            vec4 pos = uMatrix * vec4(aPos, 1.0);
+            vec4 nor = vec4(aNor, 0.0) * uInvMatrix;
+            vPos = pos.xyz;
+            vNor = nor.xyz;
+            // adapts to the shorter side
+            pos.xy *= uResolution.yx / max(uResolution.x, uResolution.y);
+            gl_Position = pos * vec4(1.,1.,-1.,1.);
+         }
+      `;
+
+      let fragmentShader = `
+         precision mediump float;
+         uniform vec3 uColor;
+         varying vec3 vPos, vNor;
+         void main(void) {
+
+            float c = .05 + max(0., dot(normalize(vNor), vec3(.57)));
+            gl_FragColor = vec4(sqrt(c * uColor), 1.);
+         }
+      `;
+
+      // INITIALIZE GL AND GET UNIFORM NAMES
+
+      let gl = start_gl(canvas1, meshData, vertexSize, vertexShader, fragmentShader);
+
+      let uColor = gl.getUniformLocation(gl.program, "uColor");
+      let uResolution = gl.getUniformLocation(gl.program, "uResolution");
+      let uInvMatrix = gl.getUniformLocation(gl.program, "uInvMatrix");
+      let uMatrix = gl.getUniformLocation(gl.program, "uMatrix");
+
+      // THE ANIMATION LOOP
+
+      let frameCount = 0;
+      let startTime = Date.now() / 1000;
+
+      function renderFrame() {
+        frameCount++;
+
+        const requestId = requestAnimationFrame(renderFrame);
+
+        let time = Date.now() / 1000 - startTime;
+        let m;
+
+        const adjustedTime = time / 4;
+
+        // LOOP THROUGH ALL OBJECTS
+
+        const colsNum = 8;
+        const rowsNum = 8;
+        const depsNum = 8;
+        for (let i = 0; i < meshData.length; i++) {
+          const particle = meshData[i];
+          const globalRotationRadius = 0.5;
+
+          const progress = i / meshData.length;
+
+          const angle = 2 * Math.PI * progress;
+
+          const particleSize = particleBaseSize * particle.size;
+
+          const x = particle.pos.x;
+          const y = particle.pos.y;
+          const z = particle.pos.z;
+
+          const localRotationX = adjustedTime;
+          const localRotationY = angle * 8;
+          const localRotationZ = adjustedTime;
+
+          const globalRotationX = 0;
+          const globalRotationY = Math.PI / 4 + ((Math.PI * 3) / 4) * S(adjustedTime * 2);
+          const globalRotationZ = 0;
+
+          const distanceToCenter = Math.sqrt(x * x + y * y + z * z);
+          const angularizedDistance = distanceToCenter * Math.PI * 2;
+          const color = [0.5 + 0.5 * Math.sin(angularizedDistance + 1), 0.5 + 0.5 * Math.sin(angularizedDistance + 2), 0.5 + 0.5 * Math.sin(angularizedDistance + 3)];
+
+          m = mIdentity();
+          m = mPerspective(6, m);
+          m = mRotateX(globalRotationX, m);
+          m = mRotateY(globalRotationY, m);
+          m = mRotateZ(globalRotationZ, m);
+          m = mTranslate(x, y, z, m);
+          m = mRotateX(localRotationX, m);
+          m = mRotateY(localRotationY, m);
+          m = mRotateZ(localRotationZ, m);
+          m = mScale(particleSize, particleSize, particleSize, m);
+
+          // SET THE VALUES OF VARIOUS UNIFORM VARIABLES
+
+          gl.uniform3fv(uColor, color);
+          gl.uniformMatrix4fv(uInvMatrix, false, mInverse(m));
+          gl.uniformMatrix4fv(uMatrix, false, m);
+
+          // RENDER THIS OBJECT
+
+          gl.bufferData(gl.ARRAY_BUFFER, particle.mesh, gl.STATIC_DRAW);
+          gl.drawArrays(particle.type ? gl.TRIANGLE_STRIP : gl.TRIANGLES, 0, particle.mesh.length / vertexSize);
+        }
+      }
+      gl.uniform2fv(uResolution, [canvas1.width, canvas1.height]);
+
+      requestAnimationFrame(renderFrame);
+    </script>
+  </center>
+</body>
