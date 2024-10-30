@@ -1,0 +1,476 @@
+<body bgcolor="black">
+  <center>
+    <div style="color: #b0b0b0; font-family: arial, sans-serif">
+      <h1>Jack's Homework #6</h1>
+      <p>[ <a style="color: #fff" href="https://jackbdu.com/computer-graphics/">Home</a> | <a style="color: #fff" href="https://github.com/jackbdu/computer-graphics/tree/main/hw6">Source Code</a> | <a style="color: #fff" href="https://www.instagram.com/p/DBvU55xxhgP/">Video</a> ]</p>
+    </div>
+    <canvas id="canvas1" width="1024" height="720"></canvas>
+    <script>
+      // A TINY MATRIX LIBRARY
+
+      let mInverse = (m) => {
+        let dst = [],
+          det = 0,
+          cofactor = (c, r) => {
+            let s = (i, j) => m[((c + i) & 3) | (((r + j) & 3) << 2)];
+            return ((c + r) & 1 ? -1 : 1) * (s(1, 1) * (s(2, 2) * s(3, 3) - s(3, 2) * s(2, 3)) - s(2, 1) * (s(1, 2) * s(3, 3) - s(3, 2) * s(1, 3)) + s(3, 1) * (s(1, 2) * s(2, 3) - s(2, 2) * s(1, 3)));
+          };
+        for (let n = 0; n < 16; n++) dst.push(cofactor(n >> 2, n & 3));
+        for (let n = 0; n < 4; n++) det += m[n] * dst[n << 2];
+        for (let n = 0; n < 16; n++) dst[n] /= det;
+        return dst;
+      };
+      let matrixMultiply = (a, b) => {
+        let dst = [];
+        for (let n = 0; n < 16; n++) dst.push(a[n & 3] * b[n & 12] + a[(n & 3) | 4] * b[(n & 12) | 1] + a[(n & 3) | 8] * b[(n & 12) | 2] + a[(n & 3) | 12] * b[(n & 12) | 3]);
+        return dst;
+      };
+      let C = (t) => Math.cos(t);
+      let S = (t) => Math.sin(t);
+      let mIdentity = () => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+      let mPerspective = (fl, m) => matrixMultiply(m, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, -1 / fl, 0, 0, 0, 1]);
+      let mRotateX = (t, m) => matrixMultiply(m, [1, 0, 0, 0, 0, C(t), S(t), 0, 0, -S(t), C(t), 0, 0, 0, 0, 1]);
+      let mRotateY = (t, m) => matrixMultiply(m, [C(t), 0, -S(t), 0, 0, 1, 0, 0, S(t), 0, C(t), 0, 0, 0, 0, 1]);
+      let mRotateZ = (t, m) => matrixMultiply(m, [C(t), S(t), 0, 0, -S(t), C(t), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+      let mScale = (x, y, z, m) => matrixMultiply(m, [x, 0, 0, 0, 0, y, 0, 0, 0, 0, z, 0, 0, 0, 0, 1]);
+      let mTranslate = (x, y, z, m) => matrixMultiply(m, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1]);
+
+      // MATRIX OBJECT, BUILT FROM MATRIX FUNXTIONS
+
+      function Matrix() {
+        let stack = [mIdentity()],
+          top = 0;
+        let set = (arg) => {
+          stack[top] = arg;
+          return this;
+        };
+        let get = () => stack[top];
+
+        this.identity = () => set(mIdentity());
+        this.perspective = (fl) => set(mPerspective(fl, get()));
+        this.rotateX = (t) => set(mRotateX(t, get()));
+        this.rotateY = (t) => set(mRotateY(t, get()));
+        this.rotateZ = (t) => set(mRotateZ(t, get()));
+        this.scale = (x, y, z) => set(mScale(x, y, z, get()));
+        this.translate = (x, y, z) => set(mTranslate(x, y, z, get()));
+        this.get = () => get();
+        this.save = () => set(stack[top++].slice());
+        this.restore = () => --top;
+      }
+
+      // INITIALIZE GL
+
+      let start_gl = (canvas, vertexSize, vertexShader, fragmentShader) => {
+        let gl = canvas.getContext("webgl");
+        let program = gl.createProgram();
+        gl.program = program;
+        let addshader = (type, src) => {
+          let shader = gl.createShader(type);
+          gl.shaderSource(shader, src);
+          gl.compileShader(shader);
+          if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw "Cannot compile shader:\n\n" + gl.getShaderInfoLog(shader);
+          gl.attachShader(program, shader);
+        };
+        addshader(gl.VERTEX_SHADER, vertexShader);
+        addshader(gl.FRAGMENT_SHADER, fragmentShader);
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw "Could not link the shader program!";
+        gl.useProgram(program);
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LEQUAL);
+        let vertexAttribute = (name, size, position) => {
+          let attr = gl.getAttribLocation(program, name);
+          gl.enableVertexAttribArray(attr);
+          gl.vertexAttribPointer(attr, size, gl.FLOAT, false, vertexSize * 4, position * 4);
+        };
+        vertexAttribute("aPos", 3, 0);
+        vertexAttribute("aNor", 3, 3);
+        return gl;
+      };
+
+      //CREATE A TRIANGLE_STRIP MESH
+
+      let createMesh = (nu, nv, p) => {
+        let mesh = [];
+        for (let j = nv - 1; j >= 0; j--) {
+          for (let i = 0; i <= nu; i++) mesh.push(p(i / nu, (j + 1) / nv), p(i / nu, j / nv));
+          mesh.push(p(1, j / nv), p(0, j / nv));
+        }
+        return mesh.flat();
+      };
+
+      // DEFINE VARIOUS KINDS OF TRIANGLE_STRIP MESHES
+
+      let customGeometry = (nu, nv) =>
+        createMesh(nu, nv, (u, v) => {
+          let theta = 2 * Math.PI * u;
+          let phi = Math.PI * (v - 0.5);
+          let x = C(phi) * C(theta);
+          let y = C(phi) * S(theta);
+          let z = 0.7 * S(phi) + 0.3 * S(theta * 4);
+          return [x, y, z, x, y, z];
+        });
+
+      let sphere = (nu, nv) =>
+        createMesh(nu, nv, (u, v) => {
+          let theta = 2 * Math.PI * u;
+          let phi = Math.PI * (v - 0.5);
+          let x = C(phi) * C(theta),
+            y = C(phi) * S(theta),
+            z = S(phi);
+          return [x, y, z, x, y, z];
+        });
+
+      let tube = (nu, nv) =>
+        createMesh(nu, nv, (u, v) => {
+          let x = C(2 * Math.PI * u),
+            y = S(2 * Math.PI * u),
+            z = 2 * v - 1;
+          return [x, y, z, x, y, 0];
+        });
+
+      let disk = (nu, nv) =>
+        createMesh(nu, nv, (u, v) => {
+          let x = v * C(2 * Math.PI * u),
+            y = v * S(2 * Math.PI * u);
+          return [x, y, 0, 0, 0, 1];
+        });
+
+      let cylinder = (nu, nv) =>
+        createMesh(nu, nv, (u, v) => {
+          let x = C(2 * Math.PI * u),
+            y = S(2 * Math.PI * u);
+          switch ((5 * v) >> 0) {
+            case 0:
+              return [0, 0, -1, 0, 0, -1];
+            case 1:
+              return [x, y, -1, 0, 0, -1];
+            case 2:
+              return [x, y, -1, x, y, 0];
+            case 3:
+              return [x, y, 1, x, y, 0];
+            case 4:
+              return [x, y, 1, 0, 0, 1];
+            case 5:
+              return [0, 0, 1, 0, 0, 1];
+          }
+        });
+
+      let torus = (nu, nv) =>
+        createMesh(nu, nv, (u, v) => {
+          let ct = C(2 * Math.PI * u);
+          let st = S(2 * Math.PI * u);
+          let cp = C(2 * Math.PI * v);
+          let sp = S(2 * Math.PI * v);
+          let x = (1 + 0.5 * cp) * ct,
+            y = (1 + 0.5 * cp) * st,
+            z = 0.5 * sp;
+          return [x, y, z, cp * ct, cp * st, sp];
+        });
+
+      // SHORTCUT TO MAKE IT EASIER TO DEFINE CUBE AND OCTAHEDRON
+
+      let strToTris = (str) => {
+        let tris = [];
+        for (let n = 0; n < str.length; n++)
+          switch (str.charAt(n)) {
+            case "N":
+              tris.push(-1);
+              break;
+            case "n":
+              tris.push(-0.577);
+              break;
+            case "0":
+              tris.push(0);
+              break;
+            case "p":
+              tris.push(0.577);
+              break;
+            case "P":
+              tris.push(1);
+              break;
+          }
+        return tris;
+      };
+
+      // DEFINE SOME MESHES MADE FROM TRIANGLES
+
+      let cube = strToTris(`PNP00P PPP00P NPP00P  NPP00P NNP00P PNP00P
+                            NPN00N PPN00N PNN00N  PNN00N NNN00N NPN00N
+                            PPNP00 PPPP00 PNPP00  PNPP00 PNNP00 PPNP00
+                            NNPN00 NPPN00 NPNN00  NPNN00 NNNN00 NNPN00
+                            NPP0P0 PPP0P0 PPN0P0  PPN0P0 NPN0P0 NPP0P0
+                            PNN0N0 PNP0N0 NNP0N0  NNP0N0 NNN0N0 PNN0N0`);
+
+      let octahedron = strToTris(`00Nnnn 0N0nnn N00nnn  P00pnn 0N0pnn 00Npnn
+                                  N00npn 0P0npn 00Nnpn  00Nppn 0P0ppn P00ppn
+                                  00Pnnp 0N0nnp N00nnp  00Ppnp 0N0pnp P00pnp
+                                  N00npp 0P0npp 00Pnpp  P00ppp 0P0ppp 00Pppp`);
+
+      // DEFINE ALL THE OBJECT SHAPES
+
+      let CustomShape = { type: 1, mesh: new Float32Array(customGeometry(20, 10)) };
+      let Cube = { type: 0, mesh: new Float32Array(cube) };
+      let Cylinder = { type: 1, mesh: new Float32Array(cylinder(20, 6)) };
+      let Disk = { type: 1, mesh: new Float32Array(disk(20, 1)) };
+      let Octahedron = { type: 0, mesh: new Float32Array(octahedron) };
+      let Sphere = { type: 1, mesh: new Float32Array(sphere(20, 10)) };
+      let Torus = { type: 1, mesh: new Float32Array(torus(30, 30)) };
+      let Tube = { type: 1, mesh: new Float32Array(tube(20, 1)) };
+
+      // VERY SIMPLE VERTEX AND FRAGMENT SHADERS
+
+      let vertexSize = 6;
+      let vertexShader = `
+         attribute vec3 aPos, aNor;
+         uniform mat4 uMatrix, uInvMatrix;
+         uniform vec2 uResolution;
+         varying vec3 vPos, vNor;
+         void main() {
+            vec4 pos = uMatrix * vec4(aPos, 1.0);
+            vec4 nor = vec4(aNor, 0.0) * uInvMatrix;
+            vPos = pos.xyz;
+            vNor = nor.xyz;
+            // adapts to the shorter side
+            pos.xy *= uResolution.yx / max(uResolution.x, uResolution.y);
+            gl_Position = pos * vec4(1.,1.,-1.,1.);
+         }
+      `;
+
+      let fragmentShader = `
+         precision mediump float;
+         uniform vec3 uColor;
+         varying vec3 vPos, vNor;
+         void main(void) {
+
+            float c = .05 + max(0., dot(normalize(vNor), vec3(.57)));
+            gl_FragColor = vec4(sqrt(c * uColor), 1.);
+         }
+      `;
+
+      // INITIALIZE GL AND GET UNIFORM NAMES
+
+      let gl = start_gl(canvas1, vertexSize, vertexShader, fragmentShader);
+
+      let uColor = gl.getUniformLocation(gl.program, "uColor");
+      let uResolution = gl.getUniformLocation(gl.program, "uResolution");
+      let uInvMatrix = gl.getUniformLocation(gl.program, "uInvMatrix");
+      let uMatrix = gl.getUniformLocation(gl.program, "uMatrix");
+
+      // INSTANTIATE THE MATRIX OBJECT
+
+      let M = new Matrix();
+
+      // RENDER ONE SHAPE, AND GIVE IT A COLOR
+
+      let render = (Shape, color) => {
+        // SET THE VALUES OF VARIOUS UNIFORM VARIABLES
+
+        gl.uniform3fv(uColor, color);
+        gl.uniformMatrix4fv(uInvMatrix, false, mInverse(M.get()));
+        gl.uniformMatrix4fv(uMatrix, false, M.get());
+
+        // RENDER THIS OBJECT
+
+        let mesh = Shape.mesh;
+        gl.bufferData(gl.ARRAY_BUFFER, mesh, gl.STATIC_DRAW);
+        gl.drawArrays(Shape.type ? gl.TRIANGLE_STRIP : gl.TRIANGLES, 0, mesh.length / vertexSize);
+      };
+
+      const renderPerson = (skinColor = [0.8, 0.8, 0.8], offsetAdjustedTime = 0, walkingPace = 1) => {
+        const headWidth = 0.065;
+        const headHeight = 0.07;
+        const neckWidth = 0.03;
+        const neckHeight = 0.02;
+        const shoulderWidth = 0.11;
+        const shoulderHeight = 0.05;
+        const shoulderSwayAmount = 0.25;
+        const shoulderSwayPace = walkingPace;
+        const shoulderSway = shoulderSwayAmount * C(offsetAdjustedTime * shoulderSwayPace);
+        const spineHeight = 0.12;
+        const spineSegmentsNum = 3;
+        const spineSegmentWidth = 0.06;
+        const spineSegmentHeight = spineHeight / spineSegmentsNum;
+        const limbLength = 0.2;
+        const limbThickness = 0.04;
+        const footLength = 0.05;
+        const footWidth = 0.04;
+        const footHeight = 0.025;
+        const hipWidth = 0.06;
+        const hipHeight = 0.04;
+        const hipSwayAmount = 0.1;
+        const hipSwayPace = walkingPace;
+        const hipSway = hipSwayAmount * C(offsetAdjustedTime * hipSwayPace);
+        const phaseDiff = 0.5 + 0.5 * S(offsetAdjustedTime * walkingPace); // 1;
+        const armLegPhaseDiff = 1;
+
+        // ANIMATE AND RENDER THE SCENE
+
+        M.rotateZ(hipSway);
+        M.save();
+        M.scale(hipWidth, hipHeight, hipHeight);
+        render(Sphere, skinColor); // PELVIS
+        M.restore();
+        M.save();
+        M.translate(0, hipHeight, 0);
+        for (let i = 0; i < spineSegmentsNum; i++) {
+          if (i !== 0) M.translate(0, spineSegmentHeight, 0);
+          M.translate(0, spineSegmentHeight, 0);
+          M.save();
+          M.scale(spineSegmentWidth, spineSegmentHeight, spineSegmentHeight);
+          render(Sphere, skinColor); // spine
+          M.restore();
+        }
+        M.translate(0, spineSegmentHeight, 0);
+        M.translate(0, shoulderHeight, 0);
+        M.rotateY(shoulderSway);
+        M.save();
+        M.scale(shoulderWidth, shoulderHeight, shoulderHeight);
+        render(Sphere, skinColor); // shoulder
+        M.restore();
+        for (let side = -1; side <= 1; side += 2) {
+          const elbow = 0.5 + 0.5 * S(offsetAdjustedTime * walkingPace + side * Math.PI * (phaseDiff + armLegPhaseDiff));
+          M.save();
+          M.translate(side * shoulderWidth, 0, 0);
+          M.rotateZ(side * elbow);
+          M.rotateY(shoulderSway);
+          M.save();
+          M.translate(0, -limbLength / 2, 0);
+          M.scale(limbThickness, limbLength / 2, limbThickness);
+          render(Sphere, skinColor); // upper arm
+          M.restore();
+          M.translate(0, -limbLength, 0);
+          M.save();
+          M.rotateZ(side * elbow);
+          M.save();
+          M.translate(0, -limbLength / 2, 0);
+          M.scale(limbThickness, limbLength / 2, limbThickness);
+          render(Sphere, skinColor); // lower arm
+          M.restore();
+          M.restore();
+          M.restore();
+        }
+        M.save();
+        M.translate(0, shoulderHeight, 0);
+        M.translate(0, neckHeight, 0);
+        M.save();
+        M.scale(neckWidth, neckHeight, neckHeight);
+        render(Sphere, skinColor);
+        M.restore();
+        M.translate(0, neckHeight, 0);
+        M.translate(0, headHeight, 0);
+        M.scale(headWidth, headHeight, headWidth);
+        render(Sphere, skinColor); // head
+        M.restore();
+        M.restore();
+        for (let side = -1; side <= 1; side += 2) {
+          const knee = 0.5 + 0.5 * S(offsetAdjustedTime * walkingPace + ((side * Math.PI) / 2) * phaseDiff);
+          M.save();
+          M.translate(side * hipWidth, 0, 0);
+          M.rotateX(-knee);
+          M.rotateZ(hipSway);
+          M.save();
+          M.translate(0, -limbLength / 2, 0);
+          M.scale(limbThickness, limbLength / 2, limbThickness);
+          render(Sphere, skinColor); // UPPER LEG
+          M.restore();
+          M.translate(0, -limbLength, 0);
+          M.save();
+          M.rotateX(2 * knee);
+          M.save();
+          M.translate(0, -limbLength / 2, 0);
+          M.scale(limbThickness, limbLength / 2, limbThickness);
+          render(Sphere, skinColor); // LOWER LEG
+          M.restore();
+          M.translate(0, -limbLength, 0);
+          M.save();
+          M.translate(0, 0, footLength);
+          M.scale(footWidth, footHeight, footLength);
+          render(Sphere, skinColor); // FOOT
+          M.restore();
+          M.restore();
+          M.restore();
+        }
+      };
+
+      // THE ANIMATION LOOP
+
+      let frameCount = 0;
+      let startTime = Date.now() / 1000;
+
+      function renderFrame() {
+        frameCount++;
+
+        const requestId = requestAnimationFrame(renderFrame);
+
+        let time = Date.now() / 1000 - startTime;
+        let m;
+
+        M.identity().perspective(20);
+
+        // DEFINE PARAMETERS THAT CONTROL THE SCENE AND THE ANIMATION
+
+        const adjustedTime = time / 6;
+        const walkingPace = 6;
+
+        const skeletonColsNumMax = 24;
+        const skeletonRowsNum = 18;
+        const colSpacing = 0.54;
+        const rowSpacing = 1.23;
+        const cagedPersonSize = 1.2;
+        const personSize = 0.2;
+        const bodyRotationYMax = Math.PI * 2;
+        const skinColor = [0.8, 0.8, 0.8];
+
+        M.rotateY(adjustedTime);
+        M.rotateX(adjustedTime);
+        M.rotateZ(Math.PI / 2);
+
+        M.save();
+        M.rotateZ(-Math.PI / 2);
+        M.translate(0, -0.1, 0);
+        M.scale(cagedPersonSize, cagedPersonSize, cagedPersonSize);
+        renderPerson(skinColor, adjustedTime + Math.PI / 4, walkingPace);
+        M.restore();
+        for (let r = 0; r < skeletonRowsNum; r++) {
+          const v = r / (skeletonRowsNum - 1);
+          const skeletonColsNum = Math.floor(skeletonColsNumMax * S(v * Math.PI) + 1);
+          for (let c = 0; c < skeletonColsNum; c++) {
+            const u = c / skeletonColsNum;
+            // const skinColor = [0.5 + 0.3 * S(u * Math.PI * 2 + 1), 0.5 + 0.3 * S((v * Math.PI) / 4 + 2), 0.5 + 0.3 * S(u * Math.PI * 2 + 3)];
+            // const skinColor = skeletonColsNum === 1 ? [0.8, 0, 0] : [0.8, 0.8, 0.8];
+            const timeOffset = u * Math.PI * 2 + v * Math.PI * 2;
+            const offsetAdjustedTime = adjustedTime + timeOffset;
+            const xOffset = 0.0;
+            const yOffset = 0.7;
+            const zOffset = 0.0;
+            const xRotation = u * Math.PI * 2;
+            const yRotation = 0;
+            const zRotation = (v - 0.5) * Math.PI;
+            const xRotationLocal = 0;
+            const yRotationLocal = Math.PI / 2;
+            const zRotationLocal = 0;
+
+            M.save();
+            M.rotateX(xRotation);
+            M.rotateY(yRotation);
+            M.rotateZ(zRotation);
+            M.translate(xOffset, yOffset, zOffset);
+            M.rotateX(xRotationLocal);
+            M.rotateY(yRotationLocal);
+            M.rotateZ(zRotationLocal);
+            M.scale(personSize, personSize, personSize);
+
+            renderPerson(skinColor, offsetAdjustedTime, walkingPace);
+
+            M.restore();
+          }
+        }
+      }
+      gl.uniform2fv(uResolution, [canvas1.width, canvas1.height]);
+
+      requestAnimationFrame(renderFrame);
+    </script>
+  </center>
+</body>
