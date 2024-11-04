@@ -1,13 +1,16 @@
-# Computer Graphics - Fall 2024
+# Computer Graphics Experiments
 
-## Course Info
+## Info
 
--   [CSCI-GA.2270-001 Computer Graphics](https://cs.nyu.edu/~perlin/courses/fall2024/)
--   Instructor: [Ken Perlin](https://cs.nyu.edu/~perlin/)
+This repository contains computer graphics experiments I developed in JavaScript and GLSL for the [Computer Graphics](https://cs.nyu.edu/~perlin/courses/fall2024/) course at NYU, taught by [Prof. Ken Perlin](https://cs.nyu.edu/~perlin/).
 
-## Homework Submissions & Daily Progressions
+The experiments were developed based on the materials covered in class, and the source code includes templates, libraries (e.g., `lib1.js`), and functions (e.g.,`float noise()`, `float turbulence()`, etc.) provided by the professor.
+
+## Weekly Submissions & Daily Progressions
 
 ### Homework 1
+
+Topics: fragment shaders
 
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw1) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw1) ]
 
@@ -19,6 +22,8 @@
 | [09/15/2024](https://www.instagram.com/p/C_87DfKy8q6/)                                                                               | [09/16/2024](https://www.instagram.com/p/C__NWBKxSkf/)                                                                                   | [09/17/2024](https://www.instagram.com/p/DAC3i1asOCs/)                                                                                      | [09/18/2024](https://www.instagram.com/p/DAF4ghvRg-O/)                                                                                       |
 
 ### Homework 2
+
+Topics: ray tracing; Phong reflectance; procedural noise and textures
 
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw2) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw2) ]
 
@@ -35,6 +40,8 @@
 
 ### Homework 3
 
+Topics: reflection and refraction in ray tracing; matrices and linear transformations
+
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw3) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw3) ]
 
 |                                                                                                                              |                                                                                                                                     |                                                                                                            |                                                                                                                              |
@@ -45,6 +52,8 @@
 | [10/07/2024](https://www.instagram.com/p/DA1uwuesQfd/)                                                                       | [10/08/2024](https://www.instagram.com/p/DA413bgMe9k/)                                                                              |
 
 ### Homework 4
+
+Topics: ray tracing to general quadric surfaces
 
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw4) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw4) ]
 
@@ -57,6 +66,8 @@
 
 ### Homework 5
 
+Topics: vertex shaders; polygons
+
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw5) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw5) ]
 
 |                                                                                                    |                                                                                                            |                                                                                                      |                                                                                               |
@@ -67,6 +78,8 @@
 | [10/21/2024](https://www.instagram.com/p/DBbChceR08L/)                                             | [10/22/2024](https://www.instagram.com/p/DBcxM9tsvh4/)                                                     | [10/23/2024](https://www.instagram.com/p/DBezLVHRHNM/)                                               |
 
 ### Homework 6
+
+Topics: hierarchical models, joint rotation
 
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw6) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw6) ]
 
