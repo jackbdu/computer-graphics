@@ -1,8 +1,10 @@
 # Computer Graphics Experiments
 
-This [repository](https://github.com/jackbdu/computer-graphics) contains computer graphics experiments I developed in JavaScript and GLSL for the [Computer Graphics](https://cs.nyu.edu/~perlin/courses/fall2024/) course at NYU, taught by [Prof. Ken Perlin](https://cs.nyu.edu/~perlin/).
+[ [Project Page](https://jackbdu.com/computer-graphics/) \| [GitHub Repository](https://github.com/jackbdu/computer-graphics) ]
 
-The experiments were developed based on the materials covered in class, and the source code includes templates, libraries (e.g., `lib1.js`), and functions (e.g.,`noise()`, `turbulence()`, etc.) provided by the professor.
+This repository contains computer graphics experiments I developed in JavaScript and GLSL for the [Computer Graphics](https://cs.nyu.edu/~perlin/courses/fall2024/) course at NYU, taught by [Prof. Ken Perlin](https://cs.nyu.edu/~perlin/).
+
+The experiments were developed based on the materials covered in class, and the source code linked on this page contains templates, libraries (e.g., `lib1.js`), and functions (e.g.,`noise()`, `turbulence()`, etc.) provided by the professor.
 
 ## Weekly Submissions & Daily Progressions
 
