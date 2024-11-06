@@ -1,0 +1,1089 @@
+<!doctype html>
+<html>
+  <head>
+    <script src="ml5.min.js"></script>
+    <style>
+      body {
+        background-color: #000;
+      }
+      main {
+        position: relative;
+        width: 1280px;
+        height: 720px;
+      }
+      nav {
+        width: 100%;
+      }
+      canvas,
+      video,
+      section {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+      video {
+        z-index: -100;
+        display: none;
+        /*
+        */
+      }
+      canvas {
+        z-index: 100;
+      }
+      section {
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+      }
+      section div {
+        flex-grow: 1;
+        width: 50%;
+      }
+      input[type="range"] {
+        position: relative;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 100%;
+        height: 5em;
+        border-radius: 5em;
+        -webkit-appearance: none;
+        background: #d3d3d3;
+        outline: none;
+        opacity: 0.7;
+        -webkit-transition: 0.2s;
+        transition: opacity 0.2s;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        vertical-align: middle;
+        -webkit-appearance: none;
+        appearance: none;
+        width: 8em;
+        height: 8em;
+        border-radius: 4em;
+        background: #ffffff;
+        cursor: pointer;
+      }
+
+      input[type="range"]::-moz-range-thumb {
+        width: 8em;
+        height: 8em;
+        border-radius: 4em;
+        background: #ffffff;
+        cursor: pointer;
+      }
+      input[type="range"]:focus,
+      input[type="range"]:focus::-webkit-slider-thumb {
+        opacity: 1;
+      }
+      button#cameraButton {
+        text-transform: uppercase;
+        bottom: 0;
+        left: 0;
+        height: 2em;
+        width: 100%;
+        font-size: 1.5em;
+        z-index: 100;
+      }
+    </style>
+  </head>
+  <body>
+    <center>
+      <div style="color: #b0b0b0; font-family: arial, sans-serif">
+        <h1>Jack's Homework #6</h1>
+        <p>[ <a style="color: #fff" href="https://jackbdu.com/computer-graphics/">Home</a> | <a style="color: #fff" href="https://github.com/jackbdu/computer-graphics/tree/main/hw7">Source Code</a> | <a style="color: #fff" href="https://www.instagram.com/p/DB_0l0JRQJk/">Video</a> ]</p>
+      </div>
+      <button id="cameraButton">Click here to activate webcam</button>
+      <main>
+        <canvas id="canvas1" width="1280" height="720"></canvas>
+        <section>
+          <div>
+            <input type="range" min="1" max="100" value="50" class="slider" />
+          </div>
+          <div>
+            <input type="range" min="1" max="100" value="50" class="slider" />
+          </div>
+        </section>
+        <video id="video"></video>
+      </main>
+    </center>
+
+    <script>
+      // A TINY MATRIX LIBRARY
+
+      let mInverse = (m) => {
+        let dst = [],
+          det = 0,
+          cofactor = (c, r) => {
+            let s = (i, j) => m[((c + i) & 3) | (((r + j) & 3) << 2)];
+            return ((c + r) & 1 ? -1 : 1) * (s(1, 1) * (s(2, 2) * s(3, 3) - s(3, 2) * s(2, 3)) - s(2, 1) * (s(1, 2) * s(3, 3) - s(3, 2) * s(1, 3)) + s(3, 1) * (s(1, 2) * s(2, 3) - s(2, 2) * s(1, 3)));
+          };
+        for (let n = 0; n < 16; n++) dst.push(cofactor(n >> 2, n & 3));
+        for (let n = 0; n < 4; n++) det += m[n] * dst[n << 2];
+        for (let n = 0; n < 16; n++) dst[n] /= det;
+        return dst;
+      };
+      let matrixMultiply = (a, b) => {
+        let dst = [];
+        for (let n = 0; n < 16; n++) dst.push(a[n & 3] * b[n & 12] + a[(n & 3) | 4] * b[(n & 12) | 1] + a[(n & 3) | 8] * b[(n & 12) | 2] + a[(n & 3) | 12] * b[(n & 12) | 3]);
+        return dst;
+      };
+      let C = (t) => Math.cos(t);
+      let S = (t) => Math.sin(t);
+      let mIdentity = () => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+      let mPerspective = (fl, m) => matrixMultiply(m, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, -1 / fl, 0, 0, 0, 1]);
+      let mRotateX = (t, m) => matrixMultiply(m, [1, 0, 0, 0, 0, C(t), S(t), 0, 0, -S(t), C(t), 0, 0, 0, 0, 1]);
+      let mRotateY = (t, m) => matrixMultiply(m, [C(t), 0, -S(t), 0, 0, 1, 0, 0, S(t), 0, C(t), 0, 0, 0, 0, 1]);
+      let mRotateZ = (t, m) => matrixMultiply(m, [C(t), S(t), 0, 0, -S(t), C(t), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+      let mScale = (x, y, z, m) => matrixMultiply(m, [x, 0, 0, 0, 0, y, 0, 0, 0, 0, z, 0, 0, 0, 0, 1]);
+      let mTranslate = (x, y, z, m) => matrixMultiply(m, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1]);
+
+      // MATRIX OBJECT, BUILT FROM MATRIX FUNXTIONS
+
+      function Matrix() {
+        let stack = [mIdentity()],
+          top = 0;
+        let set = (arg) => {
+          stack[top] = arg;
+          return this;
+        };
+        let get = () => stack[top];
+
+        this.identity = () => set(mIdentity());
+        this.perspective = (fl) => set(mPerspective(fl, get()));
+        this.rotateX = (t) => set(mRotateX(t, get()));
+        this.rotateY = (t) => set(mRotateY(t, get()));
+        this.rotateZ = (t) => set(mRotateZ(t, get()));
+        this.scale = (x, y, z) => set(mScale(x, y, z, get()));
+        this.translate = (x, y, z) => set(mTranslate(x, y, z, get()));
+        this.get = () => get();
+        this.save = () => set(stack[top++].slice());
+        this.restore = () => --top;
+      }
+
+      // INITIALIZE GL
+
+      let start_gl = (canvas, vertexSize, vertexShader, fragmentShader) => {
+        let gl = canvas.getContext("webgl");
+        let program = gl.createProgram();
+        gl.program = program;
+        let addshader = (type, src) => {
+          let shader = gl.createShader(type);
+          gl.shaderSource(shader, src);
+          gl.compileShader(shader);
+          if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw "Cannot compile shader:\n\n" + gl.getShaderInfoLog(shader);
+          gl.attachShader(program, shader);
+        };
+        addshader(gl.VERTEX_SHADER, vertexShader);
+        addshader(gl.FRAGMENT_SHADER, fragmentShader);
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw "Could not link the shader program!";
+        gl.useProgram(program);
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LEQUAL);
+        let vertexAttribute = (name, size, position) => {
+          let attr = gl.getAttribLocation(program, name);
+          gl.enableVertexAttribArray(attr);
+          gl.vertexAttribPointer(attr, size, gl.FLOAT, false, vertexSize * 4, position * 4);
+        };
+        vertexAttribute("aPos", 3, 0);
+        vertexAttribute("aNor", 3, 3);
+        return gl;
+      };
+
+      //CREATE A TRIANGLE_STRIP MESH
+
+      let createMesh = (nu, nv, p) => {
+        let mesh = [];
+        for (let j = nv - 1; j >= 0; j--) {
+          for (let i = 0; i <= nu; i++) mesh.push(p(i / nu, (j + 1) / nv), p(i / nu, j / nv));
+          mesh.push(p(1, j / nv), p(0, j / nv));
+        }
+        return mesh.flat();
+      };
+
+      // DEFINE VARIOUS KINDS OF TRIANGLE_STRIP MESHES
+
+      let customGeometry = (nu, nv) =>
+        createMesh(nu, nv, (u, v) => {
+          let theta = 2 * Math.PI * u;
+          let phi = Math.PI * (v - 0.5);
+          let x = C(phi) * C(theta);
+          let y = C(phi) * S(theta);
+          let z = 0.7 * S(phi) + 0.3 * S(theta * 4);
+          return [x, y, z, x, y, z];
+        });
+
+      let sphere = (nu, nv) =>
+        createMesh(nu, nv, (u, v) => {
+          let theta = 2 * Math.PI * u;
+          let phi = Math.PI * (v - 0.5);
+          let x = C(phi) * C(theta),
+            y = C(phi) * S(theta),
+            z = S(phi);
+          return [x, y, z, x, y, z];
+        });
+
+      let tube = (nu, nv) =>
+        createMesh(nu, nv, (u, v) => {
+          let x = C(2 * Math.PI * u),
+            y = S(2 * Math.PI * u),
+            z = 2 * v - 1;
+          return [x, y, z, x, y, 0];
+        });
+
+      let disk = (nu, nv) =>
+        createMesh(nu, nv, (u, v) => {
+          let x = v * C(2 * Math.PI * u),
+            y = v * S(2 * Math.PI * u);
+          return [x, y, 0, 0, 0, 1];
+        });
+
+      let cylinder = (nu, nv) =>
+        createMesh(nu, nv, (u, v) => {
+          let x = C(2 * Math.PI * u),
+            y = S(2 * Math.PI * u);
+          switch ((5 * v) >> 0) {
+            case 0:
+              return [0, 0, -1, 0, 0, -1];
+            case 1:
+              return [x, y, -1, 0, 0, -1];
+            case 2:
+              return [x, y, -1, x, y, 0];
+            case 3:
+              return [x, y, 1, x, y, 0];
+            case 4:
+              return [x, y, 1, 0, 0, 1];
+            case 5:
+              return [0, 0, 1, 0, 0, 1];
+          }
+        });
+
+      let torus = (nu, nv) =>
+        createMesh(nu, nv, (u, v) => {
+          let ct = C(2 * Math.PI * u);
+          let st = S(2 * Math.PI * u);
+          let cp = C(2 * Math.PI * v);
+          let sp = S(2 * Math.PI * v);
+          let x = (1 + 0.5 * cp) * ct,
+            y = (1 + 0.5 * cp) * st,
+            z = 0.5 * sp;
+          return [x, y, z, cp * ct, cp * st, sp];
+        });
+
+      // SHORTCUT TO MAKE IT EASIER TO DEFINE CUBE AND OCTAHEDRON
+
+      let strToTris = (str) => {
+        let tris = [];
+        for (let n = 0; n < str.length; n++)
+          switch (str.charAt(n)) {
+            case "N":
+              tris.push(-1);
+              break;
+            case "n":
+              tris.push(-0.577);
+              break;
+            case "0":
+              tris.push(0);
+              break;
+            case "p":
+              tris.push(0.577);
+              break;
+            case "P":
+              tris.push(1);
+              break;
+          }
+        return tris;
+      };
+
+      // DEFINE SOME MESHES MADE FROM TRIANGLES
+
+      let cube = strToTris(`PNP00P PPP00P NPP00P  NPP00P NNP00P PNP00P
+                            NPN00N PPN00N PNN00N  PNN00N NNN00N NPN00N
+                            PPNP00 PPPP00 PNPP00  PNPP00 PNNP00 PPNP00
+                            NNPN00 NPPN00 NPNN00  NPNN00 NNNN00 NNPN00
+                            NPP0P0 PPP0P0 PPN0P0  PPN0P0 NPN0P0 NPP0P0
+                            PNN0N0 PNP0N0 NNP0N0  NNP0N0 NNN0N0 PNN0N0`);
+
+      let octahedron = strToTris(`00Nnnn 0N0nnn N00nnn  P00pnn 0N0pnn 00Npnn
+                                  N00npn 0P0npn 00Nnpn  00Nppn 0P0ppn P00ppn
+                                  00Pnnp 0N0nnp N00nnp  00Ppnp 0N0pnp P00pnp
+                                  N00npp 0P0npp 00Pnpp  P00ppp 0P0ppp 00Pppp`);
+
+      // DEFINE ALL THE OBJECT SHAPES
+
+      let CustomShape = { type: 1, mesh: new Float32Array(customGeometry(20, 10)) };
+      let Cube = { type: 0, mesh: new Float32Array(cube) };
+      let Cylinder = { type: 1, mesh: new Float32Array(cylinder(20, 6)) };
+      let Disk = { type: 1, mesh: new Float32Array(disk(20, 1)) };
+      let Octahedron = { type: 0, mesh: new Float32Array(octahedron) };
+      let Sphere = { type: 1, mesh: new Float32Array(sphere(20, 10)) };
+      let Torus = { type: 1, mesh: new Float32Array(torus(30, 30)) };
+      let Tube = { type: 1, mesh: new Float32Array(tube(20, 1)) };
+
+      // VERY SIMPLE VERTEX AND FRAGMENT SHADERS
+
+      let vertexSize = 6;
+      let vertexShader = `
+         attribute vec3 aPos, aNor;
+         uniform mat4 uMatrix, uInvMatrix;
+         uniform vec2 uResolution;
+         varying vec3 vPos, vNor;
+         void main() {
+            vec4 pos = uMatrix * vec4(aPos, 1.0);
+            vec4 nor = vec4(aNor, 0.0) * uInvMatrix;
+            vPos = pos.xyz;
+            vNor = nor.xyz;
+            // adapts to the shorter side
+            pos.xy *= uResolution.yx / max(uResolution.x, uResolution.y);
+            gl_Position = pos * vec4(1.,1.,-1.,1.);
+         }
+      `;
+
+      let fragmentShader = `
+         precision mediump float;
+         uniform vec3 uColor;
+         varying vec3 vPos, vNor;
+         void main(void) {
+
+            float c = .05 + max(0., dot(normalize(vNor), vec3(.57)));
+            gl_FragColor = vec4(sqrt(c * uColor), 1.);
+         }
+      `;
+
+      // INITIALIZE GL AND GET UNIFORM NAMES
+
+      let gl = start_gl(canvas1, vertexSize, vertexShader, fragmentShader);
+
+      let uColor = gl.getUniformLocation(gl.program, "uColor");
+      let uResolution = gl.getUniformLocation(gl.program, "uResolution");
+      let uInvMatrix = gl.getUniformLocation(gl.program, "uInvMatrix");
+      let uMatrix = gl.getUniformLocation(gl.program, "uMatrix");
+
+      // INSTANTIATE THE MATRIX OBJECT
+
+      let M = new Matrix();
+
+      // RENDER ONE SHAPE, AND GIVE IT A COLOR
+
+      let render = (Shape, color) => {
+        // SET THE VALUES OF VARIOUS UNIFORM VARIABLES
+
+        gl.uniform3fv(uColor, color);
+        gl.uniformMatrix4fv(uInvMatrix, false, mInverse(M.get()));
+        gl.uniformMatrix4fv(uMatrix, false, M.get());
+
+        // RENDER THIS OBJECT
+
+        let mesh = Shape.mesh;
+        gl.bufferData(gl.ARRAY_BUFFER, mesh, gl.STATIC_DRAW);
+        gl.drawArrays(Shape.type ? gl.TRIANGLE_STRIP : gl.TRIANGLES, 0, mesh.length / vertexSize);
+      };
+
+      const videoWidth = 1920;
+      const videoHeight = 1080;
+
+      const defaultHands = [
+        {
+          keypoints3D: [
+            {
+              x: -0.04211339354515076,
+              y: 0.07700520753860474,
+              z: 0.033294677734375,
+              name: "wrist",
+            },
+            {
+              x: -0.0037949513643980026,
+              y: 0.06358001381158829,
+              z: 0.02099609375,
+              name: "thumb_cmc",
+            },
+            {
+              x: 0.024781007319688797,
+              y: 0.050581373274326324,
+              z: 0.01061248779296875,
+              name: "thumb_mcp",
+            },
+            {
+              x: 0.05286728963255882,
+              y: 0.03258093446493149,
+              z: -0.005878448486328125,
+              name: "thumb_ip",
+            },
+            {
+              x: 0.07325728982686996,
+              y: 0.014801200479269028,
+              z: -0.01134490966796875,
+              name: "thumb_tip",
+            },
+            {
+              x: 0.024624701589345932,
+              y: 0.002164185047149658,
+              z: 0.00904083251953125,
+              name: "index_finger_mcp",
+            },
+            {
+              x: 0.04308483004570007,
+              y: -0.019759897142648697,
+              z: -0.003032684326171875,
+              name: "index_finger_pip",
+            },
+            {
+              x: 0.05641541630029678,
+              y: -0.03261921554803848,
+              z: -0.00919342041015625,
+              name: "index_finger_dip",
+            },
+            {
+              x: 0.07177992165088654,
+              y: -0.04506552591919899,
+              z: -0.0316162109375,
+              name: "index_finger_tip",
+            },
+            {
+              x: 0.0025119977071881294,
+              y: -0.005251838359981775,
+              z: 0.00579071044921875,
+              name: "middle_finger_mcp",
+            },
+            {
+              x: 0.020479654893279076,
+              y: -0.038608454167842865,
+              z: -0.00858306884765625,
+              name: "middle_finger_pip",
+            },
+            {
+              x: 0.031307071447372437,
+              y: -0.05648048594594002,
+              z: -0.0246124267578125,
+              name: "middle_finger_dip",
+            },
+            {
+              x: 0.04662260413169861,
+              y: -0.07545219361782074,
+              z: -0.04150390625,
+              name: "middle_finger_tip",
+            },
+            {
+              x: -0.016305679455399513,
+              y: -0.003878820687532425,
+              z: -0.005435943603515625,
+              name: "ring_finger_mcp",
+            },
+            {
+              x: -0.006899649277329445,
+              y: -0.03269031643867493,
+              z: -0.016845703125,
+              name: "ring_finger_pip",
+            },
+            {
+              x: 0.004083018749952316,
+              y: -0.05275406315922737,
+              z: -0.0300445556640625,
+              name: "ring_finger_dip",
+            },
+            {
+              x: 0.017890647053718567,
+              y: -0.07101815193891525,
+              z: -0.043304443359375,
+              name: "ring_finger_tip",
+            },
+            {
+              x: -0.03500262647867203,
+              y: 0.007412302307784557,
+              z: -0.0131988525390625,
+              name: "pinky_finger_mcp",
+            },
+            {
+              x: -0.03506670892238617,
+              y: -0.014286447316408157,
+              z: -0.01910400390625,
+              name: "pinky_finger_pip",
+            },
+            {
+              x: -0.03077259100973606,
+              y: -0.034097425639629364,
+              z: -0.026123046875,
+              name: "pinky_finger_dip",
+            },
+            {
+              x: -0.024381818249821663,
+              y: -0.051058948040008545,
+              z: -0.03924560546875,
+              name: "pinky_finger_tip",
+            },
+          ],
+          handedness: "Left",
+          confidence: 0.98974609375,
+          label: "default",
+          wrist: {
+            x: videoWidth / 2,
+            y: videoWidth,
+            x3D: -0.04211339354515076,
+            y3D: 0.07700520753860474,
+            z3D: 0.033294677734375,
+          },
+        },
+        {
+          keypoints3D: [
+            {
+              x: 0.01612890511751175,
+              y: 0.07675822079181671,
+              z: 0.0261993408203125,
+              name: "wrist",
+            },
+            {
+              x: -0.016887785866856575,
+              y: 0.061128102242946625,
+              z: 0.009674072265625,
+              name: "thumb_cmc",
+            },
+            {
+              x: -0.04280287027359009,
+              y: 0.047918640077114105,
+              z: 0.003711700439453125,
+              name: "thumb_mcp",
+            },
+            {
+              x: -0.06719890236854553,
+              y: 0.029020246118307114,
+              z: -0.005222320556640625,
+              name: "thumb_ip",
+            },
+            {
+              x: -0.08911137282848358,
+              y: 0.010854686610400677,
+              z: -0.006195068359375,
+              name: "thumb_tip",
+            },
+            {
+              x: -0.03115038201212883,
+              y: 0.0019867364317178726,
+              z: 0.0028324127197265625,
+              name: "index_finger_mcp",
+            },
+            {
+              x: -0.03874989226460457,
+              y: -0.023371035233139992,
+              z: -0.008697509765625,
+              name: "index_finger_pip",
+            },
+            {
+              x: -0.045046478509902954,
+              y: -0.037674613296985626,
+              z: -0.019073486328125,
+              name: "index_finger_dip",
+            },
+            {
+              x: -0.05620141327381134,
+              y: -0.045428212732076645,
+              z: -0.050567626953125,
+              name: "index_finger_tip",
+            },
+            {
+              x: -0.00488327769562602,
+              y: -0.003466207766905427,
+              z: 0.0057373046875,
+              name: "middle_finger_mcp",
+            },
+            {
+              x: -0.009617694653570652,
+              y: -0.03918217122554779,
+              z: -0.01073455810546875,
+              name: "middle_finger_pip",
+            },
+            {
+              x: -0.01958189159631729,
+              y: -0.05422578379511833,
+              z: -0.034393310546875,
+              name: "middle_finger_dip",
+            },
+            {
+              x: -0.028325412422418594,
+              y: -0.07001912593841553,
+              z: -0.0582275390625,
+              name: "middle_finger_tip",
+            },
+            {
+              x: 0.019954996183514595,
+              y: -0.003930862061679363,
+              z: -0.0017032623291015625,
+              name: "ring_finger_mcp",
+            },
+            {
+              x: 0.01809924654662609,
+              y: -0.03184341639280319,
+              z: -0.01325225830078125,
+              name: "ring_finger_pip",
+            },
+            {
+              x: 0.012934856116771698,
+              y: -0.05125005915760994,
+              z: -0.03472900390625,
+              name: "ring_finger_dip",
+            },
+            {
+              x: 0.004550589248538017,
+              y: -0.06820466369390488,
+              z: -0.0562744140625,
+              name: "ring_finger_tip",
+            },
+            {
+              x: 0.036493219435214996,
+              y: 0.00985491182655096,
+              z: -0.007015228271484375,
+              name: "pinky_finger_mcp",
+            },
+            {
+              x: 0.04669257998466492,
+              y: -0.010789654217660427,
+              z: -0.01070404052734375,
+              name: "pinky_finger_pip",
+            },
+            {
+              x: 0.05065193772315979,
+              y: -0.02860133722424507,
+              z: -0.022705078125,
+              name: "pinky_finger_dip",
+            },
+            {
+              x: 0.04938162490725517,
+              y: -0.040832486003637314,
+              z: -0.040191650390625,
+              name: "pinky_finger_tip",
+            },
+          ],
+          handedness: "Right",
+          label: "default",
+          confidence: 0.9765472412109375,
+          wrist: {
+            x: videoWidth / 2,
+            y: videoWidth,
+            x3D: 0.01612890511751175,
+            y3D: 0.07675822079181671,
+            z3D: 0.0261993408203125,
+          },
+        },
+      ];
+
+      const renderHands = (hands = [], color = [0.8, 0.8, 0.8]) => {
+        //console.log(hands, hands[0].confidence, hands[1].confidence);
+        for (const hand of hands) {
+          const wristKeypoint = hand.keypoints3D[0];
+          const keypointScale = 64;
+          const sphereDiameter = 0.08;
+          const translationScale = 2; // transitionScale does not seem to evenly scale Y
+          //console.log(hand.wrist.x, hand.wrist.y);
+          const offsetX = hand.wrist.x / videoWidth - 0.5;
+          const offsetY = 0.5 - hand.wrist.y / videoHeight;
+          const adjustedOffsetX = ((offsetX * videoWidth) / videoHeight) * 2 * translationScale;
+          const adjustedOffsetY = offsetY * 2 * translationScale + 1;
+          //console.log(hand.wrist.y);
+          hand.offset = { x: adjustedOffsetY, y: adjustedOffsetY };
+          for (const keypoint of hand.keypoints3D) {
+            const x = (keypoint.x - wristKeypoint.x) * keypointScale;
+            const y = (-keypoint.y + wristKeypoint.y) * keypointScale;
+            const z = (keypoint.z - wristKeypoint.z) * keypointScale;
+            keypoint.coord = { x: x * sphereDiameter + adjustedOffsetX, y: y * sphereDiameter + adjustedOffsetY };
+            M.save();
+            M.translate(adjustedOffsetX, adjustedOffsetY, 0);
+            M.scale(sphereDiameter, sphereDiameter, sphereDiameter);
+            M.translate(x, y, z);
+            //M.translate(0, 0, 0);
+            render(Sphere, color);
+            M.restore();
+          }
+        }
+        return hands;
+      };
+
+      const renderPerson = (skinColor = [0.8, 0.8, 0.8], offsetAdjustedTime = 0, walkingPace = 1) => {
+        const headWidth = 0.065;
+        const headHeight = 0.07;
+        const neckWidth = 0.03;
+        const neckHeight = 0.02;
+        const shoulderWidth = 0.11;
+        const shoulderHeight = 0.05;
+        const shoulderSwayAmount = 0.25;
+        const shoulderSwayPace = walkingPace;
+        const shoulderSway = shoulderSwayAmount * C(offsetAdjustedTime * shoulderSwayPace);
+        const spineHeight = 0.12;
+        const spineSegmentsNum = 3;
+        const spineSegmentWidth = 0.06;
+        const spineSegmentHeight = spineHeight / spineSegmentsNum;
+        const limbLength = 0.2;
+        const limbThickness = 0.04;
+        const footLength = 0.05;
+        const footWidth = 0.04;
+        const footHeight = 0.025;
+        const hipWidth = 0.06;
+        const hipHeight = 0.04;
+        const hipSwayAmount = 0.1;
+        const hipSwayPace = walkingPace;
+        const hipSway = hipSwayAmount * C(offsetAdjustedTime * hipSwayPace);
+        const phaseDiff = 2;
+        const armLegPhaseDiff = 1;
+
+        // ANIMATE AND RENDER THE SCENE
+
+        M.rotateZ(hipSway);
+        M.save();
+        M.scale(hipWidth, hipHeight, hipHeight);
+        render(Sphere, skinColor); // PELVIS
+        M.restore();
+        M.save();
+        M.translate(0, hipHeight, 0);
+        for (let i = 0; i < spineSegmentsNum; i++) {
+          if (i !== 0) M.translate(0, spineSegmentHeight, 0);
+          M.translate(0, spineSegmentHeight, 0);
+          M.save();
+          M.scale(spineSegmentWidth, spineSegmentHeight, spineSegmentHeight);
+          render(Sphere, skinColor); // spine
+          M.restore();
+        }
+        M.translate(0, spineSegmentHeight, 0);
+        M.translate(0, shoulderHeight, 0);
+        M.rotateY(shoulderSway);
+        M.save();
+        M.scale(shoulderWidth, shoulderHeight, shoulderHeight);
+        render(Sphere, skinColor); // shoulder
+        M.restore();
+        for (let side = -1; side <= 1; side += 2) {
+          const elbow = 0.5 + 0.5 * S(offsetAdjustedTime * walkingPace + side * Math.PI * (phaseDiff + armLegPhaseDiff));
+          M.save();
+          M.translate(side * shoulderWidth, 0, 0);
+          M.rotateZ(side * elbow);
+          M.rotateY(shoulderSway);
+          M.save();
+          M.translate(0, -limbLength / 2, 0);
+          M.scale(limbThickness, limbLength / 2, limbThickness);
+          render(Sphere, skinColor); // upper arm
+          M.restore();
+          M.translate(0, -limbLength, 0);
+          M.save();
+          M.rotateZ(side * elbow);
+          M.save();
+          M.translate(0, -limbLength / 2, 0);
+          M.scale(limbThickness, limbLength / 2, limbThickness);
+          render(Sphere, skinColor); // lower arm
+          M.restore();
+          M.restore();
+          M.restore();
+        }
+        M.save();
+        M.translate(0, shoulderHeight, 0);
+        M.translate(0, neckHeight, 0);
+        M.save();
+        M.scale(neckWidth, neckHeight, neckHeight);
+        render(Sphere, skinColor);
+        M.restore();
+        M.translate(0, neckHeight, 0);
+        M.translate(0, headHeight, 0);
+        M.scale(headWidth, headHeight, headWidth);
+        render(Sphere, skinColor); // head
+        M.restore();
+        M.restore();
+        for (let side = -1; side <= 1; side += 2) {
+          const knee = 0.5 + 0.5 * S(offsetAdjustedTime * walkingPace + ((side * Math.PI) / 2) * phaseDiff);
+          M.save();
+          M.translate(side * hipWidth, 0, 0);
+          M.rotateX(-knee);
+          M.rotateZ(hipSway);
+          M.save();
+          M.translate(0, -limbLength / 2, 0);
+          M.scale(limbThickness, limbLength / 2, limbThickness);
+          render(Sphere, skinColor); // UPPER LEG
+          M.restore();
+          M.translate(0, -limbLength, 0);
+          M.save();
+          M.rotateX(2 * knee);
+          M.save();
+          M.translate(0, -limbLength / 2, 0);
+          M.scale(limbThickness, limbLength / 2, limbThickness);
+          render(Sphere, skinColor); // LOWER LEG
+          M.restore();
+          M.translate(0, -limbLength, 0);
+          M.save();
+          M.translate(0, 0, footLength);
+          M.scale(footWidth, footHeight, footLength);
+          render(Sphere, skinColor); // FOOT
+          M.restore();
+          M.restore();
+          M.restore();
+        }
+      };
+
+      // THE ANIMATION LOOP
+
+      let frameCount = 0;
+      let startTime = Date.now() / 1000;
+      let hands = JSON.parse(JSON.stringify(defaultHands));
+      const smoothness = 0.7;
+      const disappearSmoothness = 0.95;
+      const timeoutDuration = 10;
+      const timeouts = {
+        left: timeoutDuration,
+        right: timeoutDuration,
+        tick: function () {
+          this.left--;
+          this.right--;
+        },
+      };
+
+      const dist3D = (keypointA, keypointB) => {
+        const dx = keypointA.x - keypointB.x;
+        const dy = keypointA.y - keypointB.y;
+        const dz = keypointA.z - keypointB.z;
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+      };
+
+      const dist2D = (coordA, coordB) => {
+        const dx = coordA.x - coordB.x;
+        const dy = coordA.y - coordB.y;
+        return Math.sqrt(dx * dx + dy * dy);
+      };
+
+      const center2D = (coordA, coordB) => {
+        const dx = coordB.x - coordA.x;
+        const dy = coordB.y - coordA.y;
+        const x = coordA.x + dx / 2;
+        const y = coordA.y + dx / 2;
+        return { x, y };
+      };
+
+      let pCenterX = undefined;
+      const sliders = document.querySelectorAll("input");
+      let activeSlider;
+      const upperThreshold = 0.07;
+      const lowerThreshold = 0.03;
+      let pinchThreshold = lowerThreshold;
+
+      let rotateX = 0;
+      let rotateY = 0;
+      function renderFrame() {
+        frameCount++;
+        timeouts.tick();
+
+        if (timeouts.left < 0) gotHands([defaultHands[0]]);
+        if (timeouts.right < 0) gotHands([defaultHands[1]]);
+
+        const requestId = requestAnimationFrame(renderFrame);
+
+        let time = Date.now() / 1000 - startTime;
+        let m;
+
+        M.identity().perspective(30);
+
+        renderHands(hands);
+        //console.log(hands);
+        for (const hand of hands) {
+          if (hand.handedness === "Right") {
+            const indexKeypoint3D = hand.keypoints3D[8];
+            const thumbKeypoint3D = hand.keypoints3D[4];
+            const indexThumbDist = dist3D(indexKeypoint3D, thumbKeypoint3D);
+            //console.log(dist3D(hand.keypoints3D[0], hand.keypoints3D[17]));
+            /*
+          if (hand.handedness === "Right") {
+            //console.log(indexKeypoint3D.coord.x);
+          }
+          */
+            // center.x ranges from -16/9 to 16/9
+            // center.y ranges from -1 to 1
+            // within screen
+            const center = center2D(indexKeypoint3D.coord, thumbKeypoint3D.coord);
+            //console.log(indexThumbDist);
+            if (indexThumbDist < pinchThreshold) {
+              pinchThreshold = upperThreshold;
+              if (center.y > 0 && center.y < 1) {
+                if (activeSlider === undefined) activeSlider = sliders[0];
+              } else if (center.y < 0 && center.y > -1) {
+                if (activeSlider === undefined) activeSlider = sliders[1];
+              }
+              activeSlider?.focus();
+              //console.log(indexThumbDist);
+              //console.log(pCenterX, center.x);
+              if (pCenterX !== undefined) {
+                let diff = center.x - pCenterX;
+                // console.log(diff);
+                if (Math.abs(diff) < 0.01) {
+                  diff = 0;
+                } else {
+                  diff = diff * 100;
+                }
+                if (activeSlider !== undefined) activeSlider.value = parseInt(activeSlider?.value) + diff;
+
+                //console.log(diff);
+                //console.log(activeSlider);
+                //console.log(activeSlider.value);
+              }
+              pCenterX = center.x;
+            } else {
+              pinchThreshold = lowerThreshold;
+              activeSlider?.blur();
+              activeSlider = undefined;
+              pCenterX = undefined;
+            }
+          }
+        }
+
+        // DEFINE PARAMETERS THAT CONTROL THE SCENE AND THE ANIMATION
+
+        const adjustedTime = time / 6;
+
+        const walkingPace = 6;
+
+        const skeletonColsNumMax = 24;
+        const skeletonRowsNum = 18;
+        const colSpacing = 0.54;
+        const rowSpacing = 1.23;
+        const cagedPersonSize = 1.1;
+        const personSize = 0.2;
+        const bodyRotationYMax = Math.PI * 2;
+        const skinColor = [0.8, 0.8, 0.8];
+
+        const offsetXRatio = (sliders[0].value - 50) / 100;
+        const offsetYRatio = (sliders[1].value - 50) / 100;
+
+        const rotateXSpeed = Math.abs(offsetXRatio) < 0.1 ? 0 : offsetXRatio * 0.1;
+        const rotateYSpeed = Math.abs(offsetYRatio) < 0.1 ? 0 : offsetYRatio * 0.1;
+
+        rotateX += rotateXSpeed;
+        rotateY += rotateYSpeed;
+        M.rotateX(rotateX);
+        M.rotateY(rotateY);
+        M.rotateZ(Math.PI / 2);
+
+        M.save();
+        M.rotateZ(-Math.PI / 2);
+        M.translate(0, -0.1, 0);
+        M.scale(cagedPersonSize, cagedPersonSize, cagedPersonSize);
+        renderPerson(skinColor, adjustedTime + Math.PI / 4, walkingPace);
+        M.restore();
+        for (let r = 0; r < skeletonRowsNum; r++) {
+          const v = r / (skeletonRowsNum - 1);
+          const skeletonColsNum = Math.floor(skeletonColsNumMax * S(v * Math.PI) + 1);
+          for (let c = 0; c < skeletonColsNum; c++) {
+            const u = c / skeletonColsNum;
+            const skinColor = [0.5 + 0.4 * S(v * Math.PI + 2.5), 0.5 + 0.4 * S(v * Math.PI + 1.5), 0.5 + 0.4 * S(v * Math.PI + 0.5)];
+            // const skinColor = skeletonColsNum === 1 ? [0.8, 0, 0] : [0.8, 0.8, 0.8];
+            const timeOffset = u * Math.PI * 2 + v * Math.PI * 2;
+            const offsetAdjustedTime = adjustedTime + timeOffset;
+            const xOffset = 0.0;
+            const yOffset = 0.7 + 0.1 * S(v * Math.PI * 2 + adjustedTime * 6);
+            const zOffset = 0.0;
+            const xRotation = u * Math.PI * 2;
+            const yRotation = 0;
+            const zRotation = (v - 0.5) * Math.PI;
+            const xRotationLocal = 0;
+            const yRotationLocal = Math.PI / 2;
+            const zRotationLocal = 0;
+
+            M.save();
+            M.rotateX(xRotation);
+            M.rotateY(yRotation);
+            M.rotateZ(zRotation);
+            M.translate(xOffset, yOffset, zOffset);
+            M.rotateX(xRotationLocal);
+            M.rotateY(yRotationLocal);
+            M.rotateZ(zRotationLocal);
+            M.scale(personSize, personSize, personSize);
+
+            renderPerson(skinColor, offsetAdjustedTime, walkingPace);
+
+            M.restore();
+          }
+        }
+      }
+      gl.uniform2fv(uResolution, [canvas1.width, canvas1.height]);
+
+      requestAnimationFrame(renderFrame);
+    </script>
+  </body>
+  <script>
+    const gotHands = (results) => {
+      // console.log(results);
+      for (const result of results) {
+        for (const hand of hands) {
+          if (result.handedness === hand.handedness && result.confidence > 0.9) {
+            let localSmoothness = smoothness;
+            if (result.label !== "default") {
+              timeouts[result.handedness.toLowerCase()] = timeoutDuration;
+            } else {
+              localSmoothness = disappearSmoothness;
+            }
+            hand.confidence = lerp(hand.confidence, result.confidence, localSmoothness);
+            for (const axis of ["x", "y"]) {
+              hand.wrist[axis] = lerp(hand.wrist[axis], result.wrist[axis], localSmoothness);
+            }
+            for (let i = 0; i < hand.keypoints3D.length; i++) {
+              for (const axis of ["x", "y", "z"]) {
+                hand.keypoints3D[i][axis] = lerp(hand.keypoints3D[i][axis], result.keypoints3D[i][axis], smoothness);
+              }
+            }
+          }
+        }
+      }
+    };
+    const handPoseOptions = {
+      maxHands: 2,
+      flipped: true,
+      runtime: "mediapipe",
+      modelType: "full",
+    };
+    const lerp = (start, end, amount) => {
+      return start * amount + end * (1 - amount);
+    };
+    document.addEventListener("DOMContentLoaded", () => {
+      const video = document.getElementById("video");
+      video.muted = true;
+      const videoDevices = [];
+      const constraints = { audio: false, video: { width: videoWidth, height: videoHeight } };
+      const mediaDevices = navigator.mediaDevices;
+      let deviceIndex;
+      const cameraButton = document.getElementById("cameraButton");
+      const handPose = ml5.handPose(handPoseOptions, (handPose, error) => {
+        if (error) {
+          console.error(error);
+        } else {
+          cameraButton.addEventListener("click", () => {
+            if (deviceIndex !== undefined) {
+              deviceIndex = deviceIndex + 1 >= videoDevices.length ? 0 : deviceIndex + 1;
+              constraints.video.deviceId = { exact: videoDevices[deviceIndex].deviceId };
+            }
+            mediaDevices
+              .getUserMedia(constraints)
+              .then((stream) => {
+                handPose.detectStop();
+                video.srcObject = stream;
+                video.addEventListener("loadedmetadata", () => {
+                  video.play();
+                  handPose.detectStart(video, gotHands);
+                });
+                if (deviceIndex === undefined) {
+                  mediaDevices.enumerateDevices().then((devices) => {
+                    devices.forEach(function (device) {
+                      console.log(device);
+                      if (device.kind === "videoinput") {
+                        videoDevices.push(device);
+                      }
+                    });
+                    if (videoDevices.length > 0) {
+                      deviceIndex = 0;
+                      cameraButton.innerHTML = "Raise right hand and pinch a slider or click here to switch camera";
+                      //cameraButton.style = "display: none";
+                      console.log(`videoDevices count: ${videoDevices.length}`);
+                      console.log(`active video device: ${videoDevices[deviceIndex]}`);
+                    }
+                  });
+                }
+              })
+              .catch(alert);
+          });
+        }
+      });
+    });
+  </script>
+</html>
