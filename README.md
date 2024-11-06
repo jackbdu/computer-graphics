@@ -95,3 +95,8 @@ Topics: hierarchical models, joint rotation
 Topics: human/computer interaction
 
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw7) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw7) ]
+
+|                                                                                        |                                                                                        |                                                                                                       |                                                                                                |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| ![](assets/20241101-daily-experiment-hand-pose-detection-without-p5-1080p-frame-1.jpg) | ![](assets/20241102-daily-experiment-hand-pose-pinch-to-move-slider-1080p-frame-3.jpg) | ![](assets/20241103-daily-experiment-hand-pose-pinch-to-move-two-different-sliders-1080p-frame-2.jpg) | ![](assets/20241104-daily-experiment-hand-pose-sliders-controlling-rotation-1080p-frame-4.jpg) |
+| [11/01/2024](https://www.instagram.com/p/DB3U4ggRY2H/)                                 | [11/02/2024](https://www.instagram.com/p/DB6K4gyxWt2/)                                 | [11/03/2024](https://www.instagram.com/p/DB8N8njRzAi/)                                                | [11/04/2024](https://www.instagram.com/p/DB_0l0JRQJk/)                                         |
