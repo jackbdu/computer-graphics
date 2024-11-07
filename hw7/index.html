@@ -3,13 +3,19 @@
   <head>
     <script src="ml5.min.js"></script>
     <style>
+      /*
+      * {
+        margin: 0;
+        padding: 0;
+      }
+      */
       body {
         background-color: #000;
       }
       main {
         position: relative;
-        width: 1280px;
-        height: 720px;
+        width: 1920px;
+        height: 1080px;
       }
       nav {
         width: 100%;
@@ -26,6 +32,8 @@
       video {
         z-index: -100;
         display: none;
+        /*
+        */
       }
       canvas {
         z-index: 100;
@@ -87,25 +95,27 @@
       }
     </style>
   </head>
-  <body>
-    <div style="color: #b0b0b0; font-family: arial, sans-serif">
-      <h1>Jack's Homework #6</h1>
-      <p>[ <a style="color: #fff" href="https://jackbdu.com/computer-graphics/">Home</a> | <a style="color: #fff" href="https://github.com/jackbdu/computer-graphics/tree/main/hw7">Source Code</a> | <a style="color: #fff" href="https://www.instagram.com/p/DB_0l0JRQJk/">Video</a> ]</p>
-    </div>
-    <button id="cameraButton">Click here to activate webcam</button>
-    <main>
-      <canvas id="canvas1" width="1280" height="720"></canvas>
-      <section>
-        <div>
-          <input type="range" min="1" max="100" value="50" class="slider" />
-        </div>
-        <div>
-          <input type="range" min="1" max="100" value="50" class="slider" />
-        </div>
-      </section>
-      <video id="video"></video>
-    </main>
 
+  <body>
+    <center>
+      <div style="color: #b0b0b0; font-family: arial, sans-serif">
+        <h1>Jack's Homework #7</h1>
+        <p>[ <a style="color: #fff" href="https://jackbdu.com/computer-graphics/">Home</a> | <a style="color: #fff" href="https://github.com/jackbdu/computer-graphics/tree/main/hw7">Source Code</a> | <a style="color: #fff" href="https://www.instagram.com/p/DB_0l0JRQJk/">Video</a> ]</p>
+      </div>
+      <button id="cameraButton">Click here to activate webcam</button>
+      <main>
+        <canvas id="canvas1" width="1280" height="720"></canvas>
+        <section>
+          <div>
+            <input type="range" min="1" max="100" value="50" class="slider" />
+          </div>
+          <div>
+            <input type="range" min="1" max="100" value="50" class="slider" />
+          </div>
+        </section>
+        <video id="video"></video>
+      </main>
+    </center>
     <script>
       // A TINY MATRIX LIBRARY
 
@@ -298,16 +308,16 @@
       // DEFINE SOME MESHES MADE FROM TRIANGLES
 
       let cube = strToTris(`PNP00P PPP00P NPP00P  NPP00P NNP00P PNP00P
-                            NPN00N PPN00N PNN00N  PNN00N NNN00N NPN00N
-                            PPNP00 PPPP00 PNPP00  PNPP00 PNNP00 PPNP00
-                            NNPN00 NPPN00 NPNN00  NPNN00 NNNN00 NNPN00
-                            NPP0P0 PPP0P0 PPN0P0  PPN0P0 NPN0P0 NPP0P0
-                            PNN0N0 PNP0N0 NNP0N0  NNP0N0 NNN0N0 PNN0N0`);
+                                  NPN00N PPN00N PNN00N  PNN00N NNN00N NPN00N
+                                  PPNP00 PPPP00 PNPP00  PNPP00 PNNP00 PPNP00
+                                  NNPN00 NPPN00 NPNN00  NPNN00 NNNN00 NNPN00
+                                  NPP0P0 PPP0P0 PPN0P0  PPN0P0 NPN0P0 NPP0P0
+                                  PNN0N0 PNP0N0 NNP0N0  NNP0N0 NNN0N0 PNN0N0`);
 
       let octahedron = strToTris(`00Nnnn 0N0nnn N00nnn  P00pnn 0N0pnn 00Npnn
-                                  N00npn 0P0npn 00Nnpn  00Nppn 0P0ppn P00ppn
-                                  00Pnnp 0N0nnp N00nnp  00Ppnp 0N0pnp P00pnp
-                                  N00npp 0P0npp 00Pnpp  P00ppp 0P0ppp 00Pppp`);
+                                        N00npn 0P0npn 00Nnpn  00Nppn 0P0ppn P00ppn
+                                        00Pnnp 0N0nnp N00nnp  00Ppnp 0N0pnp P00pnp
+                                        N00npp 0P0npp 00Pnpp  P00ppp 0P0ppp 00Pppp`);
 
       // DEFINE ALL THE OBJECT SHAPES
 
@@ -324,36 +334,38 @@
 
       let vertexSize = 6;
       let vertexShader = `
-         attribute vec3 aPos, aNor;
-         uniform mat4 uMatrix, uInvMatrix;
-         uniform vec2 uResolution;
-         varying vec3 vPos, vNor;
-         void main() {
-            vec4 pos = uMatrix * vec4(aPos, 1.0);
-            vec4 nor = vec4(aNor, 0.0) * uInvMatrix;
-            vPos = pos.xyz;
-            vNor = nor.xyz;
-            // adapts to the shorter side
-            pos.xy *= uResolution.yx / max(uResolution.x, uResolution.y);
-            gl_Position = pos * vec4(1.,1.,-1.,1.);
-         }
-      `;
+               attribute vec3 aPos, aNor;
+               uniform mat4 uMatrix, uInvMatrix;
+               uniform vec2 uResolution;
+               varying vec3 vPos, vNor;
+               void main() {
+                  vec4 pos = uMatrix * vec4(aPos, 1.0);
+                  vec4 nor = vec4(aNor, 0.0) * uInvMatrix;
+                  vPos = pos.xyz;
+                  vNor = nor.xyz;
+                  // adapts to the shorter side
+                  pos.xy *= uResolution.yx / max(uResolution.x, uResolution.y);
+                  gl_Position = pos * vec4(1.,1.,-1.,1.);
+               }
+            `;
 
       let fragmentShader = `
-         precision mediump float;
-         uniform vec3 uColor;
-         varying vec3 vPos, vNor;
-         void main(void) {
+               precision mediump float;
+               uniform vec3 uColor;
+               uniform float uOpacity;
+               varying vec3 vPos, vNor;
+               void main(void) {
 
-            float c = .05 + max(0., dot(normalize(vNor), vec3(.57)));
-            gl_FragColor = vec4(sqrt(c * uColor), 1.);
-         }
-      `;
+                  float c = .05 + max(0., dot(normalize(vNor), vec3(.57)));
+                  gl_FragColor = vec4(sqrt(c * uColor), uOpacity);
+               }
+            `;
 
       // INITIALIZE GL AND GET UNIFORM NAMES
 
       let gl = start_gl(canvas1, vertexSize, vertexShader, fragmentShader);
 
+      let uOpacity = gl.getUniformLocation(gl.program, "uOpacity");
       let uColor = gl.getUniformLocation(gl.program, "uColor");
       let uResolution = gl.getUniformLocation(gl.program, "uResolution");
       let uInvMatrix = gl.getUniformLocation(gl.program, "uInvMatrix");
@@ -365,9 +377,10 @@
 
       // RENDER ONE SHAPE, AND GIVE IT A COLOR
 
-      let render = (Shape, color) => {
+      let render = (Shape, color, opacity) => {
         // SET THE VALUES OF VARIOUS UNIFORM VARIABLES
 
+        gl.uniform1f(uOpacity, opacity === undefined ? 1 : opacity);
         gl.uniform3fv(uColor, color);
         gl.uniformMatrix4fv(uInvMatrix, false, mInverse(M.get()));
         gl.uniformMatrix4fv(uMatrix, false, M.get());
@@ -379,304 +392,304 @@
         gl.drawArrays(Shape.type ? gl.TRIANGLE_STRIP : gl.TRIANGLES, 0, mesh.length / vertexSize);
       };
 
-      const videoWidth = 1280;
-      const videoHeight = 720;
+      const videoWidth = 1920;
+      const videoHeight = 1080;
 
       const defaultHands = [
         {
           keypoints3D: [
             {
-              x: -0.04211339354515076,
-              y: 0.07700520753860474,
-              z: 0.033294677734375,
+              x: -0.03787783160805702,
+              y: 0.07790903002023697,
+              z: 0.045928955078125,
               name: "wrist",
             },
             {
-              x: -0.0037949513643980026,
-              y: 0.06358001381158829,
-              z: 0.02099609375,
+              x: -0.0006799586117267609,
+              y: 0.06986017525196075,
+              z: 0.02447509765625,
               name: "thumb_cmc",
             },
             {
-              x: 0.024781007319688797,
-              y: 0.050581373274326324,
-              z: 0.01061248779296875,
+              x: 0.02930510975420475,
+              y: 0.06730339676141739,
+              z: 0.00826263427734375,
               name: "thumb_mcp",
             },
             {
-              x: 0.05286728963255882,
-              y: 0.03258093446493149,
-              z: -0.005878448486328125,
+              x: 0.05775517597794533,
+              y: 0.06205564737319946,
+              z: -0.00897979736328125,
               name: "thumb_ip",
             },
             {
-              x: 0.07325728982686996,
-              y: 0.014801200479269028,
-              z: -0.01134490966796875,
+              x: 0.07781694829463959,
+              y: 0.058249980211257935,
+              z: -0.0157928466796875,
               name: "thumb_tip",
             },
             {
-              x: 0.024624701589345932,
-              y: 0.002164185047149658,
-              z: 0.00904083251953125,
+              x: 0.025669753551483154,
+              y: 0.004284405615180731,
+              z: 0.00200653076171875,
               name: "index_finger_mcp",
             },
             {
-              x: 0.04308483004570007,
-              y: -0.019759897142648697,
-              z: -0.003032684326171875,
+              x: 0.040387462824583054,
+              y: -0.019960597157478333,
+              z: -0.01004791259765625,
               name: "index_finger_pip",
             },
             {
-              x: 0.05641541630029678,
-              y: -0.03261921554803848,
-              z: -0.00919342041015625,
+              x: 0.04946909099817276,
+              y: -0.03502365201711655,
+              z: -0.0194854736328125,
               name: "index_finger_dip",
             },
             {
-              x: 0.07177992165088654,
-              y: -0.04506552591919899,
-              z: -0.0316162109375,
+              x: 0.05412478744983673,
+              y: -0.047075096517801285,
+              z: -0.04656982421875,
               name: "index_finger_tip",
             },
             {
-              x: 0.0025119977071881294,
-              y: -0.005251838359981775,
-              z: 0.00579071044921875,
+              x: 0.0038058205973356962,
+              y: -0.005083218216896057,
+              z: 0.003490447998046875,
               name: "middle_finger_mcp",
             },
             {
-              x: 0.020479654893279076,
-              y: -0.038608454167842865,
-              z: -0.00858306884765625,
+              x: 0.016927238553762436,
+              y: -0.04128977656364441,
+              z: -0.01050567626953125,
               name: "middle_finger_pip",
             },
             {
-              x: 0.031307071447372437,
-              y: -0.05648048594594002,
-              z: -0.0246124267578125,
+              x: 0.019765779376029968,
+              y: -0.05910944566130638,
+              z: -0.0296783447265625,
               name: "middle_finger_dip",
             },
             {
-              x: 0.04662260413169861,
-              y: -0.07545219361782074,
-              z: -0.04150390625,
+              x: 0.025638222694396973,
+              y: -0.07863118499517441,
+              z: -0.05181884765625,
               name: "middle_finger_tip",
             },
             {
-              x: -0.016305679455399513,
-              y: -0.003878820687532425,
-              z: -0.005435943603515625,
+              x: -0.01784539967775345,
+              y: -0.006131529808044434,
+              z: -0.0011529922485351562,
               name: "ring_finger_mcp",
             },
             {
-              x: -0.006899649277329445,
-              y: -0.03269031643867493,
-              z: -0.016845703125,
+              x: -0.015706302598118782,
+              y: -0.0373476967215538,
+              z: -0.01506805419921875,
               name: "ring_finger_pip",
             },
             {
-              x: 0.004083018749952316,
-              y: -0.05275406315922737,
-              z: -0.0300445556640625,
+              x: -0.013495760038495064,
+              y: -0.05713582783937454,
+              z: -0.031768798828125,
               name: "ring_finger_dip",
             },
             {
-              x: 0.017890647053718567,
-              y: -0.07101815193891525,
-              z: -0.043304443359375,
+              x: -0.008397594094276428,
+              y: -0.07503113150596619,
+              z: -0.052459716796875,
               name: "ring_finger_tip",
             },
             {
-              x: -0.03500262647867203,
-              y: 0.007412302307784557,
-              z: -0.0131988525390625,
+              x: -0.0398726686835289,
+              y: 0.005785009823739529,
+              z: -0.0020313262939453125,
               name: "pinky_finger_mcp",
             },
             {
-              x: -0.03506670892238617,
-              y: -0.014286447316408157,
-              z: -0.01910400390625,
+              x: -0.04406750947237015,
+              y: -0.017730463296175003,
+              z: -0.007190704345703125,
               name: "pinky_finger_pip",
             },
             {
-              x: -0.03077259100973606,
-              y: -0.034097425639629364,
-              z: -0.026123046875,
+              x: -0.04889915883541107,
+              y: -0.03773116692900658,
+              z: -0.0169219970703125,
               name: "pinky_finger_dip",
             },
             {
-              x: -0.024381818249821663,
-              y: -0.051058948040008545,
-              z: -0.03924560546875,
+              x: -0.05031410604715347,
+              y: -0.05503172054886818,
+              z: -0.032684326171875,
               name: "pinky_finger_tip",
             },
           ],
           handedness: "Left",
-          confidence: 0.98974609375,
+          confidence: 0.97998046875,
           label: "default",
           wrist: {
-            x: videoWidth / 2,
-            y: videoWidth,
-            x3D: -0.04211339354515076,
-            y3D: 0.07700520753860474,
-            z3D: 0.033294677734375,
+            x: -canvas1.width,
+            y: canvas1.height * 2,
+            x3D: -0.03787783160805702,
+            y3D: 0.07790903002023697,
+            z3D: 0.045928955078125,
           },
         },
         {
           keypoints3D: [
             {
-              x: 0.01612890511751175,
-              y: 0.07675822079181671,
-              z: 0.0261993408203125,
+              x: 0.03077506460249424,
+              y: 0.0787341445684433,
+              z: 0.03558349609375,
               name: "wrist",
             },
             {
-              x: -0.016887785866856575,
-              y: 0.061128102242946625,
-              z: 0.009674072265625,
+              x: -0.0034471023827791214,
+              y: 0.06808800250291824,
+              z: 0.01552581787109375,
               name: "thumb_cmc",
             },
             {
-              x: -0.04280287027359009,
-              y: 0.047918640077114105,
-              z: 0.003711700439453125,
+              x: -0.0275352094322443,
+              y: 0.0673433393239975,
+              z: 0.00400543212890625,
               name: "thumb_mcp",
             },
             {
-              x: -0.06719890236854553,
-              y: 0.029020246118307114,
-              z: -0.005222320556640625,
+              x: -0.05462886393070221,
+              y: 0.06337296962738037,
+              z: -0.01229095458984375,
               name: "thumb_ip",
             },
             {
-              x: -0.08911137282848358,
-              y: 0.010854686610400677,
-              z: -0.006195068359375,
+              x: -0.07707756012678146,
+              y: 0.05957866460084915,
+              z: -0.0193634033203125,
               name: "thumb_tip",
             },
             {
-              x: -0.03115038201212883,
-              y: 0.0019867364317178726,
-              z: 0.0028324127197265625,
+              x: -0.028100844472646713,
+              y: 0.010674698278307915,
+              z: 0.0008516311645507812,
               name: "index_finger_mcp",
             },
             {
-              x: -0.03874989226460457,
-              y: -0.023371035233139992,
-              z: -0.008697509765625,
+              x: -0.04161762446165085,
+              y: -0.01921367272734642,
+              z: -0.0079345703125,
               name: "index_finger_pip",
             },
             {
-              x: -0.045046478509902954,
-              y: -0.037674613296985626,
-              z: -0.019073486328125,
+              x: -0.053029607981443405,
+              y: -0.03869390860199928,
+              z: -0.019134521484375,
               name: "index_finger_dip",
             },
             {
-              x: -0.05620141327381134,
-              y: -0.045428212732076645,
-              z: -0.050567626953125,
+              x: -0.05916087329387665,
+              y: -0.04715891554951668,
+              z: -0.04901123046875,
               name: "index_finger_tip",
             },
             {
-              x: -0.00488327769562602,
-              y: -0.003466207766905427,
-              z: 0.0057373046875,
+              x: -0.006577180698513985,
+              y: -0.0034057102166116238,
+              z: 0.0045623779296875,
               name: "middle_finger_mcp",
             },
             {
-              x: -0.009617694653570652,
-              y: -0.03918217122554779,
-              z: -0.01073455810546875,
+              x: -0.014785446226596832,
+              y: -0.03959852457046509,
+              z: -0.007785797119140625,
               name: "middle_finger_pip",
             },
             {
-              x: -0.01958189159631729,
-              y: -0.05422578379511833,
-              z: -0.034393310546875,
+              x: -0.022368265315890312,
+              y: -0.05796787142753601,
+              z: -0.02984619140625,
               name: "middle_finger_dip",
             },
             {
-              x: -0.028325412422418594,
-              y: -0.07001912593841553,
-              z: -0.0582275390625,
+              x: -0.02951589971780777,
+              y: -0.07634104043245316,
+              z: -0.052001953125,
               name: "middle_finger_tip",
             },
             {
-              x: 0.019954996183514595,
-              y: -0.003930862061679363,
-              z: -0.0017032623291015625,
+              x: 0.019404077902436256,
+              y: -0.008080526255071163,
+              z: 0.00021207332611083984,
               name: "ring_finger_mcp",
             },
             {
-              x: 0.01809924654662609,
-              y: -0.03184341639280319,
-              z: -0.01325225830078125,
+              x: 0.012943966314196587,
+              y: -0.03479362279176712,
+              z: -0.011444091796875,
               name: "ring_finger_pip",
             },
             {
-              x: 0.012934856116771698,
-              y: -0.05125005915760994,
-              z: -0.03472900390625,
+              x: 0.009323356673121452,
+              y: -0.054588038474321365,
+              z: -0.0297088623046875,
               name: "ring_finger_dip",
             },
             {
-              x: 0.004550589248538017,
-              y: -0.06820466369390488,
-              z: -0.0562744140625,
+              x: 0.002226961776614189,
+              y: -0.06964603066444397,
+              z: -0.050018310546875,
               name: "ring_finger_tip",
             },
             {
-              x: 0.036493219435214996,
-              y: 0.00985491182655096,
-              z: -0.007015228271484375,
+              x: 0.03703770786523819,
+              y: 0.0037277601659297943,
+              z: -0.0020751953125,
               name: "pinky_finger_mcp",
             },
             {
-              x: 0.04669257998466492,
-              y: -0.010789654217660427,
-              z: -0.01070404052734375,
+              x: 0.040491532534360886,
+              y: -0.01926642283797264,
+              z: -0.00423431396484375,
               name: "pinky_finger_pip",
             },
             {
-              x: 0.05065193772315979,
-              y: -0.02860133722424507,
-              z: -0.022705078125,
+              x: 0.04097524657845497,
+              y: -0.0364639088511467,
+              z: -0.0166015625,
               name: "pinky_finger_dip",
             },
             {
-              x: 0.04938162490725517,
-              y: -0.040832486003637314,
-              z: -0.040191650390625,
+              x: 0.036471910774707794,
+              y: -0.05132535845041275,
+              z: -0.033233642578125,
               name: "pinky_finger_tip",
             },
           ],
           handedness: "Right",
+          confidence: 0.94091796875,
           label: "default",
-          confidence: 0.9765472412109375,
           wrist: {
-            x: videoWidth / 2,
-            y: videoWidth,
-            x3D: 0.01612890511751175,
-            y3D: 0.07675822079181671,
-            z3D: 0.0261993408203125,
+            x: canvas1.width,
+            y: canvas1.height * 2,
+            x3D: 0.03077506460249424,
+            y3D: 0.0787341445684433,
+            z3D: 0.03558349609375,
           },
         },
       ];
 
-      const renderHands = (hands = [], color = [0.8, 0.8, 0.8]) => {
+      const renderHands = (hands = [], color = [0.8, 0.8, 0.8], opacity = 1) => {
         //console.log(hands, hands[0].confidence, hands[1].confidence);
         for (const hand of hands) {
           const wristKeypoint = hand.keypoints3D[0];
           const keypointScale = 64;
           const sphereDiameter = 0.08;
-          const translationScale = 2; // transitionScale does not seem to evenly scale Y
+          const translationScale = 8; // transitionScale does not seem to evenly scale Y
           //console.log(hand.wrist.x, hand.wrist.y);
           const offsetX = hand.wrist.x / videoWidth - 0.5;
           const offsetY = 0.5 - hand.wrist.y / videoHeight;
-          const adjustedOffsetX = ((offsetX * videoWidth) / videoHeight) * 2 * translationScale;
-          const adjustedOffsetY = offsetY * 2 * translationScale + 1;
+          const adjustedOffsetX = ((offsetX * videoWidth) / videoHeight) * translationScale;
+          const adjustedOffsetY = offsetY * translationScale + 1;
           //console.log(hand.wrist.y);
           hand.offset = { x: adjustedOffsetY, y: adjustedOffsetY };
           for (const keypoint of hand.keypoints3D) {
@@ -689,7 +702,7 @@
             M.scale(sphereDiameter, sphereDiameter, sphereDiameter);
             M.translate(x, y, z);
             //M.translate(0, 0, 0);
-            render(Sphere, color);
+            render(Sphere, color, opacity);
             M.restore();
           }
         }
@@ -873,7 +886,9 @@
 
         M.identity().perspective(30);
 
-        renderHands(hands);
+        const handsColor = activeSlider === undefined ? [0.8, 0.8, 0.8] : [0.5, 0.8, 0.5];
+
+        renderHands(hands, handsColor, 0.3);
         //console.log(hands);
         for (const hand of hands) {
           if (hand.handedness === "Right") {
@@ -882,20 +897,24 @@
             const indexThumbDist = dist3D(indexKeypoint3D, thumbKeypoint3D);
             //console.log(dist3D(hand.keypoints3D[0], hand.keypoints3D[17]));
             /*
-          if (hand.handedness === "Right") {
-            //console.log(indexKeypoint3D.coord.x);
-          }
-          */
-            // center.x ranges from -16/9 to 16/9
-            // center.y ranges from -1 to 1
-            // within screen
+                  if (hand.handedness === "Right") {
+                    //console.log(indexKeypoint3D.coord.x);
+                  }
+                  */
+            // screen bounds
+            const minScreenY = -1;
+            const maxScreenY = 1;
+            const minScreenX = -canvas1.width / canvas1.height;
+            const maxScreenX = canvas1.width / canvas1.height;
+
             const center = center2D(indexKeypoint3D.coord, thumbKeypoint3D.coord);
             //console.log(indexThumbDist);
-            if (indexThumbDist < pinchThreshold) {
+            //console.log(center);
+            if (indexThumbDist < pinchThreshold && center.x > minScreenX && center.x < maxScreenX && center.y > minScreenY && center.y < maxScreenY) {
               pinchThreshold = upperThreshold;
-              if (center.y > 0 && center.y < 1) {
+              if (center.y > 0) {
                 if (activeSlider === undefined) activeSlider = sliders[0];
-              } else if (center.y < 0 && center.y > -1) {
+              } else if (center.y < 0) {
                 if (activeSlider === undefined) activeSlider = sliders[1];
               }
               activeSlider?.focus();
@@ -927,7 +946,7 @@
 
         // DEFINE PARAMETERS THAT CONTROL THE SCENE AND THE ANIMATION
 
-        const adjustedTime = time / 6;
+        const adjustedTime = time / 5;
 
         const walkingPace = 6;
 
@@ -963,7 +982,7 @@
           const skeletonColsNum = Math.floor(skeletonColsNumMax * S(v * Math.PI) + 1);
           for (let c = 0; c < skeletonColsNum; c++) {
             const u = c / skeletonColsNum;
-            const skinColor = [0.5 + 0.4 * S(v * Math.PI + 2.5), 0.5 + 0.4 * S(v * Math.PI + 1.5), 0.5 + 0.4 * S(v * Math.PI + 0.5)];
+            const skinColor = [0.5 + 0.4 * S(v * Math.PI + 1.5), 0.5 + 0.4 * S(v * Math.PI + 1.0), 0.5 + 0.4 * S(v * Math.PI + 0.5)];
             // const skinColor = skeletonColsNum === 1 ? [0.8, 0, 0] : [0.8, 0.8, 0.8];
             const timeOffset = u * Math.PI * 2 + v * Math.PI * 2;
             const offsetAdjustedTime = adjustedTime + timeOffset;
@@ -1000,7 +1019,7 @@
   </body>
   <script>
     const gotHands = (results) => {
-      // console.log(results);
+      //console.log(results);
       for (const result of results) {
         for (const hand of hands) {
           if (result.handedness === hand.handedness && result.confidence > 0.9) {
@@ -1061,7 +1080,7 @@
                 if (deviceIndex === undefined) {
                   mediaDevices.enumerateDevices().then((devices) => {
                     devices.forEach(function (device) {
-                      console.log(device);
+                      //console.log(device);
                       if (device.kind === "videoinput") {
                         videoDevices.push(device);
                       }
@@ -1070,8 +1089,8 @@
                       deviceIndex = 0;
                       cameraButton.innerHTML = "Raise right hand and pinch a slider or click here to switch camera";
                       //cameraButton.style = "display: none";
-                      console.log(`videoDevices count: ${videoDevices.length}`);
-                      console.log(`active video device: ${videoDevices[deviceIndex]}`);
+                      //console.log(`videoDevices count: ${videoDevices.length}`);
+                      //console.log(`active video device: ${videoDevices[deviceIndex]}`);
                     }
                   });
                 }
