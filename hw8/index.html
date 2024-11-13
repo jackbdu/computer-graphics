@@ -1,0 +1,233 @@
+<!doctype html>
+<html>
+  <head>
+    <style>
+      body {
+        background-color: #000;
+      }
+    </style>
+  </head>
+  <body>
+    <center>
+      <div style="color: #b0b0b0; font-family: arial, sans-serif">
+        <h1>Jack's Homework #8</h1>
+        <p>[ <a style="color: #fff" href="https://jackbdu.com/computer-graphics/">Home</a> | <a style="color: #fff" href="https://github.com/jackbdu/computer-graphics/tree/main/hw8">Source Code</a> | <a style="color: #fff" href="https://www.instagram.com/p/DCSkzVlMLOQ/">Video</a> ]</p>
+      </div>
+      <main>
+        <canvas id="canvas1" width="1280" height="720"></canvas>
+      </main>
+      <aside>
+        <canvas class="textureCanvas" width="128" height="128"></canvas>
+        <canvas class="textureCanvas" width="128" height="128"></canvas>
+        <canvas class="textureCanvas" width="128" height="128"></canvas>
+        <canvas class="textureCanvas" width="128" height="128"></canvas>
+        <canvas class="textureCanvas" width="128" height="128"></canvas>
+        <canvas class="textureCanvas" width="128" height="128"></canvas>
+      </aside>
+    </center>
+    <script src="lib.js"></script>
+    <script>
+      const textureCanvases = document.querySelectorAll(".textureCanvas");
+      const bumpCanvas = document.querySelector(".bumpCanvas");
+
+      /* texture canvases */
+      const colors = ["#C2FFC7", "#62825D"];
+      const colsNum = 2;
+      const rowsNum = 2;
+      const reps = 2;
+
+      const arc = (canvas, x, y, w, h, start, stop) => {
+        canvas.beginPath();
+        canvas.ellipse(x, y, w, h, 0, start, stop);
+        canvas.stroke();
+      };
+      const line = (canvas, x1, y1, x2, y2) => {
+        canvas.beginPath();
+        canvas.moveTo(x1, y1);
+        canvas.lineTo(x2, y2);
+        canvas.stroke();
+      };
+      const tile = (canvas, x, y, w, h, orientation) => {
+        const lineWidth = 32 / colsNum / reps;
+        canvas.fillStyle = colors[0];
+        canvas.fillRect(x, y, w, h);
+        canvas.strokeStyle = colors[1];
+        canvas.lineWidth = lineWidth;
+        canvas.lineCap = "round";
+        if (orientation === 0) {
+          for (let i = reps; i > 0; i--) {
+            const progress = i / reps;
+            const radiusW = (w / 2) * progress;
+            const radiusH = (h / 2) * progress;
+            arc(canvas, x, y, radiusW, radiusH, Math.PI * 0.5 * 0, Math.PI * 0.5 * 1);
+            arc(canvas, x + w, y + h, radiusW, radiusH, Math.PI * 0.5 * 2, Math.PI * 0.5 * 3);
+            if (i < reps) {
+              arc(canvas, x + w, y, radiusW, radiusH, Math.PI * 0.5, Math.PI * 0.5 * 2);
+              arc(canvas, x, y + h, radiusW, radiusH, Math.PI * 0.5 * 3, Math.PI * 0.5 * 4);
+            }
+          }
+        } else if (orientation === 1) {
+          for (let i = 1; i < reps * 2; i++) {
+            const progress = i / (reps * 2);
+            const offsetY = progress * h;
+            const offsetX = progress * w;
+            line(canvas, x, y + offsetY, x + w, y + offsetY);
+            line(canvas, x + offsetX, y, x + offsetX, y);
+            line(canvas, x + offsetX, y + h, x + offsetX, y + h);
+          }
+        } else if (orientation === 2) {
+          for (let i = 1; i < reps * 2; i++) {
+            const progress = i / (reps * 2);
+            const offsetY = progress * h;
+            const offsetX = progress * w;
+            line(canvas, x + offsetX, y, x + offsetX, y + h);
+            line(canvas, x, y + offsetY, x, y + offsetY);
+            line(canvas, x + w, y + offsetY, x + w, y + offsetY);
+          }
+        } else {
+          for (let i = reps; i > 0; i--) {
+            const progress = i / reps;
+            const radiusW = (w / 2) * progress;
+            const radiusH = (h / 2) * progress;
+            arc(canvas, x + w, y, radiusW, radiusH, Math.PI * 0.5, Math.PI * 0.5 * 2);
+            arc(canvas, x, y + h, radiusW, radiusH, Math.PI * 0.5 * 3, Math.PI * 0.5 * 4);
+            if (i < reps) {
+              arc(canvas, x, y, radiusW, radiusH, Math.PI * 0.5 * 0, Math.PI * 0.5 * 1);
+              arc(canvas, x + w, y + h, radiusW, radiusH, Math.PI * 0.5 * 2, Math.PI * 0.5 * 3);
+            }
+          }
+        }
+      };
+
+      for (let i = 0; i < textureCanvases.length; i++) {
+        const textureCanvas = textureCanvases[i];
+        texture(i, textureCanvas); // NOTE: THIS IS AN HTML CANVAS BEING USED AS A TEXTURE SOURCE.
+        const textureCanvasContext = textureCanvas.getContext("2d");
+        const width = textureCanvas.width;
+        const height = textureCanvas.height;
+        const tileWidth = width / colsNum;
+        const tileHeight = height / rowsNum;
+        for (let c = 0; c < colsNum; c++) {
+          for (let r = 0; r < rowsNum; r++) {
+            const x = c * tileWidth;
+            const y = r * tileHeight;
+            tile(textureCanvasContext, x, y, tileWidth, tileHeight, Math.floor(Math.random() * 4));
+          }
+        }
+      }
+
+      const cols = 4;
+      const rows = 4;
+      const deps = 4;
+      const interval = Math.PI / 4;
+      const transitionRate = 2;
+      const minScale = 0.35;
+      const maxScale = 0.5;
+      const rotations = [];
+      const initialRotations = [];
+      let lastMoveTime = 0;
+      const updateRotations = (initial = false) => {
+        for (let i = 0; i < cols * rows * deps; i++) {
+          const x = Math.PI * 0.5 * Math.round(3 * Math.random());
+          const y = Math.PI * 0.5 * Math.round(3 * Math.random());
+          const z = Math.PI * 0.5 * Math.round(3 * Math.random());
+          if (rotations[i] === undefined) {
+            const px = Math.PI * 0.5 * Math.round(3 * Math.random());
+            const py = Math.PI * 0.5 * Math.round(3 * Math.random());
+            const pz = Math.PI * 0.5 * Math.round(3 * Math.random());
+            rotations[i] = { x, y, z, px, py, pz };
+            initialRotations[i] = { x, y, z, px, py, pz };
+          } else {
+            rotations[i].px = rotations[i].x;
+            rotations[i].py = rotations[i].y;
+            rotations[i].pz = rotations[i].z;
+            if (initial) {
+              rotations[i].x = initialRotations[i].px;
+              rotations[i].y = initialRotations[i].py;
+              rotations[i].z = initialRotations[i].pz;
+            } else {
+              rotations[i].x = x;
+              rotations[i].y = y;
+              rotations[i].z = z;
+            }
+          }
+        }
+      };
+
+      updateRotations();
+
+      let frameCount = 0;
+
+      const textureIndices = [];
+      for (let i = 0; i < cols * rows * deps; i++) {
+        const randomTextureIndex = Math.floor(textureCanvases.length * Math.random());
+        textureIndices.push(randomTextureIndex);
+      }
+
+      function drawFrame() {
+        frameCount++;
+        const requestId = requestAnimationFrame(drawFrame);
+        let t = Date.now() / 1000;
+
+        const adjustedTime = t / 6;
+
+        // CHANGE THE CONTENT OF THE 2D CANVAS EVERY ANIMATION FRAME.
+
+        let progress = (adjustedTime - lastMoveTime) / interval;
+        let transitionAngle = progress * Math.PI * 2 * transitionRate;
+        if (transitionAngle > Math.PI * 2) transitionAngle = Math.PI * 2;
+        const lerpAmount = 0.5 + 0.5 * Math.cos(transitionAngle);
+        const scale = minScale + (maxScale - minScale) * lerpAmount;
+        if (progress >= 1) {
+          lastMoveTime = adjustedTime;
+          progress = 0;
+          let initial = false;
+          if (Math.PI * 2 - (adjustedTime % (Math.PI * 2)) < interval * 1.5) initial = true;
+          updateRotations(initial);
+        }
+
+        M.S().perspective(2);
+        M.S().turnY(adjustedTime);
+        M.S().turnX(adjustedTime);
+        M.S()
+          .turnX(Math.PI / 4)
+          .turnZ(Math.PI / 4);
+        for (let c = 0; c < cols; c++) {
+          for (let r = 0; r < rows; r++) {
+            for (let d = 0; d < deps; d++) {
+              const x = (c + 0.5) / cols - 0.5;
+              const y = (r + 0.5) / rows - 0.5;
+              const z = (d + 0.5) / deps - 0.5;
+              const index = d * cols * rows + r * cols + c;
+              const rotation = rotations[index];
+              const drx = rotation.x - rotation.px;
+              const dry = rotation.y - rotation.py;
+              const drz = rotation.z - rotation.pz;
+              let transitionAngle = progress * Math.PI * transitionRate;
+              if (transitionAngle > Math.PI) transitionAngle = Math.PI;
+              const lerpAmount = 0.5 - 0.5 * Math.cos(transitionAngle);
+              const rx = rotation.px + drx * lerpAmount;
+              const ry = rotation.py + dry * lerpAmount;
+              const rz = rotation.pz + drz * lerpAmount;
+              const textureIndex = textureIndices[index];
+              M.S()
+                .move(x, y, z)
+                .turnX(rx)
+                .turnY(ry)
+                .turnZ(rz)
+                .scale(1 / cols, 1 / rows, 1 / deps)
+                .scale(scale);
+              M.draw(Cube(), [1, 1, 1], 1, textureIndex, -1);
+              M.R();
+            }
+          }
+        }
+        M.R();
+        M.R();
+        M.R();
+        M.R();
+      }
+      requestAnimationFrame(drawFrame);
+    </script>
+  </body>
+</html>
