@@ -10,7 +10,7 @@ The experiments were developed based on the materials covered in class, and the 
 
 ### Homework 1
 
-Topics: fragment shaders
+Topic: fragment shaders
 
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw1) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw1) ]
 
@@ -53,7 +53,7 @@ Topics: reflection and refraction in ray tracing; matrices and linear transforma
 
 ### Homework 4
 
-Topics: ray tracing to general quadric surfaces
+Topic: ray tracing to general quadric surfaces
 
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw4) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw4) ]
 
@@ -79,7 +79,7 @@ Topics: vertex shaders; polygons
 
 ### Homework 6
 
-Topics: hierarchical models, joint rotation
+Topics: hierarchical models; joint rotation
 
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw6) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw6) ]
 
@@ -92,7 +92,7 @@ Topics: hierarchical models, joint rotation
 
 ### Homework 7
 
-Topics: human/computer interaction
+Topic: human/computer interaction
 
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw7) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw7) ]
 
@@ -105,7 +105,7 @@ Topics: human/computer interaction
 
 ### Homework 8
 
-Topics: texture mapping
+Topic: texture mapping
 
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw8) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw8) ]
 
@@ -115,3 +115,12 @@ Topics: texture mapping
 | [11/07/2024](https://www.instagram.com/p/DCJutllxM-m/)                                                              | [11/08/2024](https://www.instagram.com/p/DCL9NtiRfpo/)                                                                                       | [11/09/2024](https://www.instagram.com/p/DCNPBdeR5uE/)                                                                    | [11/10/2024](https://www.instagram.com/p/DCOXAgoxbco/)                                                                                    |
 | ![](assets/20241111-daily-experiment-truchet-inspired-stripe-pattern-formed-by-cubes-4x4x4-1080p-frame-0000994.png) | ![](assets/20241112-daily-experiment-truchet-inspired-stripe-pattern-formed-by-cubes-4x4x4-random-texture-each-side-1080p-frame-0000879.png) | ![](assets/20241113-daily-experiment-truchet-inspired-stripe-pattern-formed-by-cubes-4x4x4-green-1080p-frame-0000416.png) | ![](assets/)                                                                                                                              |
 | [11/11/2024](https://www.instagram.com/p/DCQNd5WshYD/)                                                              | [11/12/2024](https://www.instagram.com/p/DCSkzVlMLOQ/)                                                                                       | [11/13/2024](https://www.instagram.com/p/DCUjd2yRdSm/)                                                                    |
+
+### Homework 9
+
+Topic: spline curves
+
+|                                                                                                      |                                                                                         |                                                                        |                                                                                                      |
+| ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| ![](assets/20241114-daily-experiment-click-to-add-vertex-and-enter-to-close-shape-1080p-frame-4.jpg) | ![](assets/20241115-daily-experiment-randomly-curved-hermite-splines-1080p-frame-4.jpg) | ![](assets/20241116-daily-experiment-beizer-splines-1080p-frame-4.jpg) | ![](assets/20241117-daily-experiment-beizer-splines-with-draggable-control-points-1080p-frame-4.jpg) |
+| [11/14/2024](https://www.instagram.com/p/DCbidhqRxZt/)                                               | [11/15/2024](https://www.instagram.com/p/DCduP5gRFKX/)                                  | [11/16/2024](https://www.instagram.com/p/DCfDp5xSu-B/)                 | [11/17/2024](https://www.instagram.com/p/DCf6SjgsqdA/)                                               |
