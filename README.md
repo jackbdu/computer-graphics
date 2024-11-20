@@ -1,6 +1,6 @@
 # Computer Graphics Experiments
 
-[ [Project Page](https://jackbdu.com/computer-graphics/) \| [GitHub Repository](https://github.com/jackbdu/computer-graphics) ]
+[ [Project Page](https://jackbdu.com/computer-graphics/) \| [GitHub Repository](https://github.com/jackbdu/computer-graphics) \| [About Me](https://jackbdu.com/about/) ]
 
 This repository contains computer graphics experiments I developed in JavaScript and GLSL for the [Computer Graphics](https://cs.nyu.edu/~perlin/courses/fall2024/) course at NYU, taught by [Prof. Ken Perlin](https://cs.nyu.edu/~perlin/).
 
@@ -120,7 +120,11 @@ Topic: texture mapping
 
 Topic: spline curves
 
-|                                                                                                      |                                                                                         |                                                                        |                                                                                                      |
-| ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| ![](assets/20241114-daily-experiment-click-to-add-vertex-and-enter-to-close-shape-1080p-frame-4.jpg) | ![](assets/20241115-daily-experiment-randomly-curved-hermite-splines-1080p-frame-4.jpg) | ![](assets/20241116-daily-experiment-beizer-splines-1080p-frame-4.jpg) | ![](assets/20241117-daily-experiment-beizer-splines-with-draggable-control-points-1080p-frame-4.jpg) |
-| [11/14/2024](https://www.instagram.com/p/DCbidhqRxZt/)                                               | [11/15/2024](https://www.instagram.com/p/DCduP5gRFKX/)                                  | [11/16/2024](https://www.instagram.com/p/DCfDp5xSu-B/)                 | [11/17/2024](https://www.instagram.com/p/DCf6SjgsqdA/)                                               |
+[ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw9) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw9) ]
+
+|                                                                                                      |                                                                                                                  |                                                                        |                                                                                                      |
+| ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| ![](assets/20241114-daily-experiment-click-to-add-vertex-and-enter-to-close-shape-1080p-frame-4.jpg) | ![](assets/20241115-daily-experiment-randomly-curved-hermite-splines-1080p-frame-4.jpg)                          | ![](assets/20241116-daily-experiment-beizer-splines-1080p-frame-4.jpg) | ![](assets/20241117-daily-experiment-beizer-splines-with-draggable-control-points-1080p-frame-4.jpg) |
+| [11/14/2024](https://www.instagram.com/p/DCbidhqRxZt/)                                               | [11/15/2024](https://www.instagram.com/p/DCduP5gRFKX/)                                                           | [11/16/2024](https://www.instagram.com/p/DCfDp5xSu-B/)                 | [11/17/2024](https://www.instagram.com/p/DCf6SjgsqdA/)                                               |
+| ![](assets/20241118-daily-experiment-beizer-splines-with-enhanced-editability-1080p-frame-4.jpg)     | ![](assets/20241119-daily-experiment-beizer-splines-symmetrical-control-points-and-select-all-1080p-frame-6.jpg) |
+| [11/18/2024](https://www.instagram.com/p/DChlSd9y4zB/)                                               | [11/19/2024](https://www.instagram.com/p/DClMydnsBXQ/)                                                           |

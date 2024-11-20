@@ -1,0 +1,541 @@
+<!doctype html>
+<html>
+  <head>
+    <style>
+      body {
+        background-color: #000;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <center>
+      <div style="color: #b0b0b0; font-family: arial, sans-serif">
+        <h1>Jack's Homework #9</h1>
+        <p>[ <a style="color: #fff" href="https://jackbdu.com/computer-graphics/">Home</a> | <a style="color: #fff" href="https://github.com/jackbdu/computer-graphics/tree/main/hw9">Source Code</a> | <a style="color: #fff" href="https://www.instagram.com/p/DClMydnsBXQ/">Video</a> | <a style="color: #fff" href="https://jackbdu.com/p5-code-painter/">p5.js Code Painter</a>]</p>
+      </div>
+      <main>
+        <canvas width="1280" height="720"></canvas>
+      </main>
+    </center>
+    <script>
+      const MIN_GRAB_DIST = 16;
+      const VERTEX_SIZE = 32;
+      const LINE_WIDTH = 8;
+
+      const VERTEX_RATE_RANDOM_INTENSITY = 512;
+      const CURVE_DETAILS = 64;
+      const MOVE_INCREMENT = 2;
+
+      const IS_MAC = window.navigator.platform.toLowerCase().includes("mac");
+
+      const line = (x1, y1, x2, y2, ctx = defaultContext) => {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        hasStroke ? ctx.stroke() : "";
+      };
+      const rect = (x, y, w, h, ctx = defaultContext) => {
+        ctx.beginPath();
+        ctx.rect(x, y, w, h);
+        hasFill ? ctx.fill() : "";
+        hasStroke ? ctx.stroke() : "";
+      };
+      const square = (x, y, size, ctx = defaultContext) => {
+        rect(x - size / 2, y - size / 2, size, size, ctx);
+      };
+      const ellipse = (x, y, w, h, rotation = 0, startAngle = 0, endAngle = Math.PI * 2, counterClockwise = false, ctx = defaultContext) => {
+        ctx.beginPath();
+        ctx.ellipse(x, y, w / 2, h / 2, rotation, startAngle, endAngle, counterClockwise);
+        hasFill ? ctx.fill() : "";
+        hasStroke ? ctx.stroke() : "";
+      };
+      const circle = (x, y, d, ctx = defaultContext) => {
+        ellipse(x, y, d, d, 0, 0, Math.TWO_PI, false, ctx);
+      };
+      const fill = (color, ctx = defaultContext) => {
+        hasFill = true;
+        defaultContext.fillStyle = color;
+      };
+      const stroke = (color, ctx = defaultContext) => {
+        hasStroke = true;
+        defaultContext.strokeStyle = color;
+      };
+      const noStroke = () => {
+        hasStroke = false;
+      };
+      const noFill = () => {
+        hasFill = false;
+      };
+      const strokeWeight = (weight, ctx = defaultContext) => {
+        defaultContext.lineWidth = weight;
+      };
+      const strokeCap = (style, ctx = defaultContext) => {
+        defaultContext.lineCap = style;
+      };
+      const background = (color, ctx = defaultContext) => {
+        const originalFillColor = ctx.fillStyle;
+        const originalStrokeColor = ctx.strokeStyle;
+        fill(color);
+        noStroke();
+        rect(0, 0, canvas.width, canvas.height);
+        stroke(originalStrokeColor);
+        fill(originalFillColor);
+      };
+      const hermiteCurve = (p0, p1, r0, r1, t) => {
+        const a = 2 * p0 - 2 * p1 + r0 + r1;
+        const b = -3 * p0 + 3 * p1 - 2 * r0 - r1;
+        const c = r0;
+        const d = p0;
+        return a * t * t * t + b * t * t + c * t + d;
+      };
+      const hermiteCurve2D = (p0x, p0y, r0x, r0y, p1x, p1y, r1x, r1y, details = 16, ctx = defaultContext) => {
+        const vertex = {};
+        const pvertex = {};
+        for (let t = 0; t <= 1; t += 1 / details) {
+          vertex.x = hermiteCurve(p0x, p1x, r0x, r1x, t);
+          vertex.y = hermiteCurve(p0y, p1y, r0y, r1y, t);
+          if (pvertex.x !== undefined && pvertex.y !== undefined) {
+            line(pvertex.x, pvertex.y, vertex.x, vertex.y);
+          }
+          pvertex.x = vertex.x;
+          pvertex.y = vertex.y;
+        }
+      };
+      const quadraticCurve = (a, b, c, t) => {
+        return a * (1 - t) * (1 - t) + 2 * b * (1 - t) * t + c * t * t;
+      };
+      const quadraticCurve2D = (ax, ay, bx, by, cx, cy, details = 16, ctx = defaultContext) => {
+        const vertex = {};
+        const pvertex = {};
+        for (let t = 0; t <= 1; t += 1 / details) {
+          vertex.x = quadraticCurve(ax, bx, cx, t);
+          vertex.y = quadraticCurve(ay, by, cy, t);
+          if (pvertex.x !== undefined && pvertex.y !== undefined) {
+            line(pvertex.x, pvertex.y, vertex.x, vertex.y);
+          }
+          pvertex.x = vertex.x;
+          pvertex.y = vertex.y;
+        }
+      };
+      const bezierCurve = (a, b, c, d, t) => {
+        return a * (1 - t) * (1 - t) * (1 - t) + 3 * b * (1 - t) * (1 - t) * t + 3 * c * (1 - t) * t * t + d * t * t * t;
+        //return (-a + 3 * b - 3 * c + d) * t * t * t + (3 * a - 6 * b + 3 * c) * t * t + (-3 * a + 3 * b) * t + d;
+      };
+      const bezierCurve2D = (ax, ay, bx, by, cx, cy, dx, dy, details = 16, ctx = defaultContext) => {
+        const vertex = {};
+        const pvertex = {};
+        for (let t = 0; t <= 1; t += 1 / details) {
+          vertex.x = bezierCurve(ax, bx, cx, dx, t);
+          vertex.y = bezierCurve(ay, by, cy, dy, t);
+          if (pvertex.x !== undefined && pvertex.y !== undefined) {
+            line(pvertex.x, pvertex.y, vertex.x, vertex.y);
+          }
+          pvertex.x = vertex.x;
+          pvertex.y = vertex.y;
+        }
+      };
+
+      const dist = (x0, y0, x1, y1) => {
+        return Math.sqrt((x0 - x1) * (x0 - x1) + (y0 - y1) * (y0 - y1));
+      };
+
+      const canvas = document.querySelector("canvas");
+      const defaultContext = canvas.getContext("2d");
+
+      let hasStroke = true;
+      let hasFill = true;
+      let mode = "creatingSpline";
+      let altIsPressed = false;
+
+      const splines = [];
+      let activeSplines = [];
+
+      strokeCap("round");
+
+      const drawFrame = () => {
+        requestAnimationFrame(drawFrame);
+        let t = Date.now() / 1000;
+
+        background("#fff");
+
+        // DRAW SPLINES
+        strokeWeight(LINE_WIDTH);
+        for (let i = 0; i < splines.length; i++) {
+          const spline = splines[i];
+          spline.draw();
+        }
+
+        activeSplines.forEach((spline) => {
+          spline.drawUI();
+        });
+        /*
+              // hermite splines
+              for (const spline of splines) {
+                for (let i = 1; i < spline.length; i++) {
+                  const vertex0 = spline[i - 1];
+                  const vertex1 = spline[i];
+                  hermiteCurve2D(vertex0.x, vertex0.y, vertex0.rx, vertex0.ry, vertex1.x, vertex1.y, vertex1.rx, vertex1.ry, CURVE_DETAILS);
+                }
+              }
+              // quadratic splines
+              stroke("#000");
+              strokeWeight(LINE_WIDTH);
+              for (const spline of splines) {
+                for (let i = 2; i < spline.length; i += 2) {
+                  const vertex0 = spline[i - 2];
+                  const vertex1 = spline[i - 1];
+                  const vertex2 = spline[i - 0];
+                  quadraticCurve2D(vertex0.x, vertex0.y, vertex1.x, vertex1.y, vertex2.x, vertex2.y, CURVE_DETAILS);
+                }
+              }
+              */
+      };
+
+      class Vertex {
+        constructor(x, y) {
+          this.x = x;
+          this.y = y;
+        }
+        moveTo(x, y) {
+          this.x = x;
+          this.y = y;
+        }
+        moveBy(dx, dy) {
+          this.x += dx;
+          this.y += dy;
+        }
+      }
+
+      class ControlPoint extends Vertex {
+        constructor(x, y, parentVertex) {
+          super(x, y);
+          this.parentVertex = parentVertex;
+        }
+
+        drawUI(ctx = defaultContext) {
+          circle(this.x, this.y, VERTEX_SIZE, ctx);
+        }
+      }
+
+      class BezierVertex extends Vertex {
+        constructor(x, y, cx0, cy0, cx1, cy1) {
+          super(x, y);
+          this.c0 = new ControlPoint(cx0 ?? x, cy0 ?? y, this);
+          this.c1 = new ControlPoint(cx1 ?? x, cy1 ?? y, this);
+        }
+
+        moveBy(dx, dy) {
+          this.x += dx;
+          this.y += dy;
+          this.c0.moveBy(dx, dy);
+          this.c1.moveBy(dx, dy);
+        }
+
+        moveTo(x, y) {
+          const dx = x - this.x;
+          const dy = y - this.y;
+          this.moveBy(dx, dy);
+        }
+
+        drawUI(ctx = defaultContext) {
+          try {
+            strokeWeight(LINE_WIDTH);
+            stroke("#58f");
+            fill("#fff");
+            line(this.x, this.y, this.c0.x, this.c0.y);
+            line(this.x, this.y, this.c1.x, this.c1.y);
+            square(this.x, this.y, VERTEX_SIZE, ctx);
+            this.c0.drawUI(ctx);
+            this.c1.drawUI(ctx);
+          } catch (error) {
+            console.error(error);
+          }
+        }
+
+        matchControlPoints(cp) {}
+      }
+
+      class Curve {
+        constructor(v0, v1) {
+          this.v0 = v0;
+          this.v1 = v1;
+        }
+
+        draw(ctx = defaultContext) {
+          try {
+            line(this.v0.x, this.v0.y, this.v1.x, this.v1.y, ctx);
+          } catch (error) {
+            console.error(error);
+          }
+        }
+      }
+
+      class BezierCurve extends Curve {
+        constructor(v0, v1) {
+          super(v0, v1);
+          this.type = "bezier";
+        }
+
+        draw(ctx = defaultContext) {
+          try {
+            strokeWeight(LINE_WIDTH);
+            stroke("#000");
+            bezierCurve2D(this.v0.x, this.v0.y, this.v0.c0.x, this.v0.c0.y, this.v1.c1.x, this.v1.c1.y, this.v1.x, this.v1.y, CURVE_DETAILS, ctx);
+          } catch (error) {
+            console.error(error);
+          }
+        }
+      }
+
+      class Spline {
+        constructor(x, y) {
+          this.vertices = [];
+          this.curves = [];
+          // this.addVertex(x, y);
+          this.addBezierVertex(x, y);
+          this.activeVertices;
+          this.activeCurve;
+          this.grabbedElement;
+        }
+
+        addVertex(x, y) {
+          this.activeVertes = [new Vertex(x, y)];
+          this.vertices.push(this.activeVertices[0]);
+          if (this.vertices.length > 1) {
+            const i0 = this.vertices.length - 2;
+            const i1 = this.vertices.length - 1;
+            const v0 = this.vertices[i0];
+            const v1 = this.vertices[i1];
+            this.activeCurve = new Curve(v0, v1);
+            this.curves.push(this.activeCurve);
+          }
+          return this;
+        }
+
+        activateAllVertices() {
+          this.activeVertices = [...this.vertices];
+        }
+
+        moveBy(dx, dy) {
+          this.activeVertices.forEach((vertex) => vertex.moveBy(dx, dy));
+        }
+
+        removeActiveVertices() {
+          for (let i = this.vertices.length; i >= 0; i--) {
+            const vertex = this.vertices[i];
+            if (this.activeVertices.includes(vertex)) {
+              const before = this.vertices[i - 1];
+              const after = this.vertices[i + 1];
+              this.vertices.splice(i, 1);
+              if (before && after) {
+                this.curves.splice(i, 1);
+                this.curves.splice(i - 1, 1, new BezierCurve(before, after));
+              } else if (before) {
+                this.curves.splice(i - 1, 1);
+              } else {
+                this.curves.splice(i, 1);
+              }
+            }
+          }
+          this.activeVertices = [];
+        }
+
+        getHoveredElement(x, y) {
+          let closestDist = Infinity;
+          let hoveredVertex;
+          const verticesAndControlPoints = [...this.vertices];
+          this.activeVertices.forEach((vertex) => {
+            verticesAndControlPoints.push(vertex.c0);
+            verticesAndControlPoints.push(vertex.c1);
+          });
+          for (const vertex of verticesAndControlPoints) {
+            const distance = dist(vertex.x, vertex.y, x, y);
+            if (distance < MIN_GRAB_DIST && distance < closestDist) {
+              closestDist = distance;
+              hoveredVertex = vertex;
+            }
+          }
+          return hoveredVertex;
+        }
+
+        grabHoveredElement(x, y) {
+          this.grabbedElement = this.getHoveredElement(x, y);
+          if (this.grabbedElement instanceof BezierVertex && !this.activeVertices.includes(this.grabbedElement)) this.activeVertices = [this.grabbedElement];
+          return this.grabbedElement;
+        }
+
+        moveGrabbedElement(x, y, enableControlPointMirroring = true) {
+          if (this.grabbedElement && this.grabbedElement instanceof ControlPoint && enableControlPointMirroring) {
+            this.updateBezierVertexControlPoints(x, y, this.grabbedElement);
+          } else {
+            this.grabbedElement?.moveTo(x, y);
+          }
+        }
+
+        addBezierVertex(x, y) {
+          this.activeVertices = [new BezierVertex(x, y)];
+          this.vertices.push(this.activeVertices[0]);
+          if (this.vertices.length > 1) {
+            const i0 = this.vertices.length - 2;
+            const i1 = this.vertices.length - 1;
+            const v0 = this.vertices[i0];
+            const v1 = this.vertices[i1];
+            this.activeCurve = new BezierCurve(v0, v1);
+            this.curves.push(this.activeCurve);
+          }
+          return this;
+        }
+
+        updateBezierVertexControlPoints(cx, cy, controlPoint) {
+          if (this.vertices.length > 0) {
+            const bezierVertex = controlPoint?.parentVertex ?? this.vertices[this.vertices.length - 1];
+            const cxMirrored = bezierVertex.x - (cx - bezierVertex.x);
+            const cyMirrored = bezierVertex.y - (cy - bezierVertex.y);
+            if (controlPoint === bezierVertex.c1) {
+              bezierVertex.c0.moveTo(cxMirrored, cyMirrored);
+              bezierVertex.c1.moveTo(cx, cy);
+            } else {
+              bezierVertex.c0.moveTo(cx, cy);
+              bezierVertex.c1.moveTo(cxMirrored, cyMirrored);
+            }
+          }
+        }
+
+        close() {
+          if (this.vertices.length > 1 && this.vertices.length !== this.curves.length) {
+            const i0 = this.vertices.length - 1;
+            const i1 = 0;
+            const v0 = this.vertices[i0];
+            const v1 = this.vertices[i1];
+            this.curves.push(new BezierCurve(v0, v1));
+          }
+          return this;
+        }
+
+        getCurve(i) {
+          return this.curves[i];
+        }
+
+        draw(ctx = defaultContext) {
+          for (const curve of this.curves) {
+            curve.draw(ctx);
+          }
+        }
+
+        drawUI(ctx = defaultContext) {
+          strokeWeight(LINE_WIDTH);
+          stroke("#000");
+          fill("#fff");
+          for (const vertex of this.vertices) {
+            square(vertex.x, vertex.y, VERTEX_SIZE, ctx);
+          }
+          this.activeVertices.forEach((vertex) => vertex.drawUI(ctx));
+        }
+      }
+
+      const onMouseDown = (event) => {
+        const x = event.offsetX;
+        const y = event.offsetY;
+        const rx = (Math.random() - 0.5) * VERTEX_RATE_RANDOM_INTENSITY;
+        const ry = (Math.random() - 0.5) * VERTEX_RATE_RANDOM_INTENSITY;
+        activeSplines.forEach((spline) => {
+          if (spline.grabHoveredElement(x, y)) {
+            mode = "draggingVertex";
+          }
+        });
+        switch (mode) {
+          case "creatingSpline":
+            activeSplines = [new Spline(x, y)];
+            splines.push(activeSplines[0]);
+            mode = "draggingControlPoint";
+            break;
+          case "addingVertex":
+            // activeSpline.addVertex(x, y);
+            activeSplines[activeSplines.length - 1]?.addBezierVertex(x, y);
+            mode = "draggingControlPoint";
+            break;
+        }
+      };
+
+      const onMouseMove = (event) => {
+        const x = event.offsetX;
+        const y = event.offsetY;
+        switch (mode) {
+          case "draggingControlPoint":
+            activeSplines[activeSplines.length - 1]?.updateBezierVertexControlPoints(x, y);
+            break;
+          case "draggingVertex":
+            canvas.style.cursor = "grabbing";
+            activeSplines.forEach((spline) => {
+              spline.moveGrabbedElement(x, y, !altIsPressed);
+            });
+            break;
+          default:
+            canvas.style.cursor = "auto";
+            activeSplines.forEach((spline) => {
+              if (spline?.getHoveredElement(x, y)) {
+                canvas.style.cursor = "grab";
+              }
+            });
+            break;
+        }
+      };
+
+      const onMouseUp = (event) => {
+        mode = "addingVertex";
+      };
+
+      const onKeyDown = (event) => {
+        const modifierKeyIsPressed = (IS_MAC && event.metaKey) || (!IS_MAC && evt.ctrlKey);
+        if (event.altKey) altIsPressed = true;
+        switch (event.code) {
+          case "Escape":
+            activeSplines = [];
+            mode = "creatingSpline";
+            break;
+          case "Enter":
+            activeSplines.forEach((spline) => spline.close());
+            activeSplines = [];
+            mode = "creatingSpline";
+            break;
+          case "Backspace":
+            activeSplines.forEach((spline) => spline.removeActiveVertices());
+            mode = "creatingSpline";
+            break;
+          case "KeyA":
+            if (modifierKeyIsPressed) {
+              activeSplines = [...splines];
+              activeSplines.forEach((spline) => spline.activateAllVertices());
+              mode = "creatingSpline";
+            }
+            break;
+          case "ArrowUp":
+            activeSplines.forEach((spline) => spline.moveBy(0, -MOVE_INCREMENT));
+            break;
+          case "ArrowDown":
+            activeSplines.forEach((spline) => spline.moveBy(0, MOVE_INCREMENT));
+            break;
+          case "ArrowLeft":
+            activeSplines.forEach((spline) => spline.moveBy(-MOVE_INCREMENT, 0));
+            break;
+          case "ArrowRight":
+            activeSplines.forEach((spline) => spline.moveBy(MOVE_INCREMENT, 0));
+            break;
+        }
+      };
+
+      const onKeyUp = (event) => {
+        altIsPressed = false;
+      };
+
+      canvas.addEventListener("mousedown", onMouseDown);
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
+      document.addEventListener("keydown", onKeyDown);
+      document.addEventListener("keyup", onKeyUp);
+
+      requestAnimationFrame(drawFrame);
+    </script>
+  </body>
+</html>
