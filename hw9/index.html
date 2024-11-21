@@ -6,6 +6,18 @@
         background-color: #000;
         margin: 0;
       }
+      aside {
+        color: #fff;
+      }
+      aside ul {
+        max-width: 1280px;
+        text-align: left;
+        line-height: 1.5em;
+      }
+      aside li {
+        font-family: arial, sans-serif;
+        list-style-type: none;
+      }
     </style>
   </head>
   <body>
@@ -17,6 +29,17 @@
       <main>
         <canvas width="1280" height="720"></canvas>
       </main>
+      <aside>
+        <ul>
+          <li>Click and drag to create a bezier vertex.</li>
+          <li>Hold Alt/Option key to adjust control point individually (after a vertex is created).</li>
+          <li>Use Ctrl/Cmd + A to select all vertices.</li>
+          <li>Use Arrow keys to move selected vertices.</li>
+          <li>Use Backspace key to remove selected veretx/vertices.</li>
+          <li>Press Esc key to deselect spline(s).</li>
+          <li>Press Enter key to close selected spline(s).</li>
+        </ul>
+      </aside>
     </center>
     <script>
       const MIN_GRAB_DIST = 16;
@@ -505,6 +528,7 @@
             break;
           case "KeyA":
             if (modifierKeyIsPressed) {
+              event.preventDefault();
               activeSplines = [...splines];
               activeSplines.forEach((spline) => spline.activateAllVertices());
               mode = "creatingSpline";
