@@ -1,0 +1,266 @@
+<body bgcolor="#000">
+  <font face="courier">
+    <center>
+      <div style="color: #b0b0b0; font-family: arial, sans-serif">
+        <h1>Jack's Homework #10</h1>
+        <p>[ <a style="color: #fff" href="https://jackbdu.com/computer-graphics/">Home</a> | <a style="color: #fff" href="https://github.com/jackbdu/computer-graphics/tree/main/hw10">Source Code</a> | <a style="color: #fff" href="https://www.instagram.com/jackbdu/">Video</a> ]</p>
+      </div>
+      <main>
+        <canvas id="canvas1" width="900" height="700"></canvas>
+      </main>
+      <aside>
+        <canvas class="textureCanvas" width="2048" height="2048"></canvas>
+        <canvas class="textureCanvas" width="512" height="512"></canvas>
+      </aside>
+    </center>
+
+    <script src="lib.js"></script>
+    <script>
+      // not sure if spring is working properly
+      trackMouse(canvas1);
+      //texture(0, "brick.png");
+      // I PRE-BUILD ALL MY OBJECTS FOR EFFICIENCY.
+
+      let myCube = Cube();
+      let myCylinder = Cylinder(20);
+      let mySphere = Sphere(20);
+      let myTube = Tube(20);
+      const ARMS_NUM = 16;
+
+      // MY MATERIAL IN THIS EXAMPLE IS UNIFORM FOG.
+
+      addMaterial(
+        1,
+        `
+        float noiseValue = noise(vec3(vTpos.x * 10., vTpos.y * 10., vTpos.z * 10.));
+        color = mix(color, vec3(noiseValue*noiseValue+0.6, noiseValue*noiseValue+0.5, noiseValue*noiseValue+0.4), min(.95,.007 * dot(vTpos, vTpos)));`
+      );
+      startGL(canvas1);
+
+      // MY SPRING HAS HIGH MASS, SO IT WILL RESPOND LIKE A HEAVY OBJECT.
+
+      const springs = [];
+      for (let i = 0; i < ARMS_NUM; i++) {
+        spring2D = [];
+        for (let j = 0; j < 2; j++) {
+          let spring = new Spring();
+          spring.setMass(1);
+          spring.setDamping(1);
+          spring2D.push(spring);
+        }
+        springs.push(spring2D);
+      }
+
+      const textureCanvases = document.querySelectorAll(".textureCanvas");
+
+      /* texture canvases */
+      const patternProperties = [
+        { cols: 128, rows: 16, fillColor: "#F7F7F7", strokeColor: "#c0c0c0" },
+        { cols: 8, rows: 4, fillColor: "#F7F7F7", strokeColor: "#c0c0c0" },
+      ];
+      const reps = 3;
+
+      const arc = (canvas, x, y, w, h, start, stop) => {
+        canvas.beginPath();
+        canvas.ellipse(x, y, w, h, 0, start, stop);
+        canvas.stroke();
+      };
+      const line = (canvas, x1, y1, x2, y2) => {
+        canvas.beginPath();
+        canvas.moveTo(x1, y1);
+        canvas.lineTo(x2, y2);
+        canvas.stroke();
+      };
+      const tile = (canvas, x, y, w, h, orientation, fillColor = "#fff", strokeColor = "#000") => {
+        canvas.fillStyle = fillColor;
+        canvas.fillRect(x, y, w, h);
+        canvas.strokeStyle = strokeColor;
+        canvas.lineCap = "round";
+        if (orientation === 0) {
+          for (let i = reps; i > 0; i--) {
+            const progress = i / reps;
+            const radiusW = (w / 2) * progress;
+            const radiusH = (h / 2) * progress;
+            arc(canvas, x, y, radiusW, radiusH, Math.PI * 0.5 * 0, Math.PI * 0.5 * 1);
+            arc(canvas, x + w, y + h, radiusW, radiusH, Math.PI * 0.5 * 2, Math.PI * 0.5 * 3);
+            if (i < reps) {
+              arc(canvas, x + w, y, radiusW, radiusH, Math.PI * 0.5, Math.PI * 0.5 * 2);
+              arc(canvas, x, y + h, radiusW, radiusH, Math.PI * 0.5 * 3, Math.PI * 0.5 * 4);
+            }
+          }
+        } else if (orientation === 1) {
+          for (let i = 1; i < reps * 2; i++) {
+            const progress = i / (reps * 2);
+            const offsetY = progress * h;
+            const offsetX = progress * w;
+            line(canvas, x, y + offsetY, x + w, y + offsetY);
+            line(canvas, x + offsetX, y, x + offsetX, y);
+            line(canvas, x + offsetX, y + h, x + offsetX, y + h);
+          }
+        } else if (orientation === 2) {
+          for (let i = 1; i < reps * 2; i++) {
+            const progress = i / (reps * 2);
+            const offsetY = progress * h;
+            const offsetX = progress * w;
+            line(canvas, x + offsetX, y, x + offsetX, y + h);
+            line(canvas, x, y + offsetY, x, y + offsetY);
+            line(canvas, x + w, y + offsetY, x + w, y + offsetY);
+          }
+        } else {
+          for (let i = reps; i > 0; i--) {
+            const progress = i / reps;
+            const radiusW = (w / 2) * progress;
+            const radiusH = (h / 2) * progress;
+            arc(canvas, x + w, y, radiusW, radiusH, Math.PI * 0.5, Math.PI * 0.5 * 2);
+            arc(canvas, x, y + h, radiusW, radiusH, Math.PI * 0.5 * 3, Math.PI * 0.5 * 4);
+            if (i < reps) {
+              arc(canvas, x, y, radiusW, radiusH, Math.PI * 0.5 * 0, Math.PI * 0.5 * 1);
+              arc(canvas, x + w, y + h, radiusW, radiusH, Math.PI * 0.5 * 2, Math.PI * 0.5 * 3);
+            }
+          }
+        }
+      };
+
+      for (let i = 0; i < textureCanvases.length; i++) {
+        const colsNum = patternProperties[i].cols;
+        const rowsNum = patternProperties[i].rows;
+        const fillColor = patternProperties[i].fillColor;
+        const strokeColor = patternProperties[i].strokeColor;
+        const textureCanvas = textureCanvases[i];
+        textureCanvas.style.display = "none";
+        texture(i, textureCanvas); // NOTE: THIS IS AN HTML CANVAS BEING USED AS A TEXTURE SOURCE.
+        const textureCanvasContext = textureCanvas.getContext("2d");
+        const width = textureCanvas.width;
+        const height = textureCanvas.height;
+        const tileWidth = width / colsNum;
+        const tileHeight = height / rowsNum;
+        const lineWidth = textureCanvas.width / colsNum / reps / 4;
+        textureCanvasContext.lineWidth = lineWidth;
+        for (let c = 0; c < colsNum; c++) {
+          for (let r = 0; r < rowsNum; r++) {
+            const x = c * tileWidth;
+            const y = r * tileHeight;
+            tile(textureCanvasContext, x, y, tileWidth, tileHeight, Math.floor(Math.random() * 4), fillColor, strokeColor);
+          }
+        }
+      }
+
+      let frameCount = 0;
+      function drawFrame() {
+        frameCount++;
+        const requestId = requestAnimationFrame(drawFrame);
+        let time = Date.now() / 1000;
+        const adjustedTime = time / 6;
+        canvas1.rx = adjustedTime * 30;
+
+        // SCALE THE SCENE NON-UNIFORMLY BECAUSE THE CANVAS IS NOT SQUARE.
+
+        VM.identity()
+          .perspective(3)
+          .scale(1, canvas1.width / canvas1.height, 1);
+
+        // USE THE MOUSE TO ROTATE THE VIEW ONLY IF NOT RUNNING ON A PHONE.
+
+        if (!isPhone()) VM.turnX(canvas1.ry / 30).turnY(canvas1.rx / 30);
+
+        drawScene(() => {
+          material = 1;
+
+          for (let i = 0; i < ARMS_NUM; i++) {
+            const spring = springs[i];
+            const angle = (i / ARMS_NUM) * TAU;
+
+            // PLACE AND THEN RENDER THE JOINTS (SHOULDER, ELBOW, WRIST), USING IK.
+
+            const jointColor = [143 / 255, 171 / 255, 152 / 255];
+            const limbColor = [191 / 255, 208 / 255, 193 / 255];
+            const weightHandleColor = [1, 1, 1];
+
+            const weightSize = 0.08;
+            const weightHandleThickness = 0.01;
+            const weightHandleLength = 0.1;
+            const limbThickness = 0.02;
+            const jointSize = 0.04;
+            const jointThickness = 0.03;
+            const upperArmLength = 0.3;
+            const lowerArmLength = 0.3;
+
+            const liftingCyclesNum = 48;
+            const liftingFreqency = 8;
+            const liftingHeight = 0.3;
+            const liftingForwardDistance = 0.15;
+            const elbowDirectionalTendency = [0, -1, 0];
+            const springElasticity = 0.01;
+
+            const wristYAtT = (t) => {
+              return lowerArmLength - liftingHeight * ease(0.5 + 0.5 * S(t * liftingFreqency + angle * liftingCyclesNum));
+            };
+            const wristXAtT = (t) => {
+              return 0.45 + liftingForwardDistance * ease(0.5 + 0.5 * S(t * liftingFreqency + angle * liftingCyclesNum));
+            };
+            const wristX = wristXAtT(adjustedTime);
+            const wristY = wristYAtT(adjustedTime);
+
+            const wristPos = [wristX, wristY, 0];
+            const shoulderPos = [0.2, 0.4, 0];
+            const elbowPos = add(shoulderPos, ik(upperArmLength, lowerArmLength, subtract(wristPos, shoulderPos), elbowDirectionalTendency));
+
+            M.S().turnY(angle);
+            M.S().move(shoulderPos).scale(jointSize).draw(mySphere, jointColor).R();
+            M.S().move(wristPos).scale(jointSize).draw(mySphere, jointColor).R();
+            M.S().move(elbowPos).scale(jointSize, jointSize, jointThickness).draw(myCylinder, jointColor).R();
+
+            // DRAW THE LIMBS THAT CONNECT THE JOINTS.
+
+            M.S()
+              .move(mix(shoulderPos, elbowPos, 0.5))
+              .aim(subtract(elbowPos, shoulderPos))
+              .scale(limbThickness, limbThickness, distance(shoulderPos, elbowPos) / 2)
+              .draw(myCylinder, limbColor)
+              .R();
+            M.S()
+              .move(mix(elbowPos, wristPos, 0.5))
+              .aim(subtract(wristPos, elbowPos))
+              .scale(limbThickness, limbThickness, distance(elbowPos, wristPos) / 2)
+              .draw(myCylinder, limbColor)
+              .R();
+
+            // DANGLE A MASS BELOW THE WRIST, AND ANIMATE IT WITH A SPRING FORCE.
+
+            //spring.setForce(liftingHeight * ease(0.5 + 0.5 * S(adjustedTime * liftingFreqency)));
+            const rateY = -(wristYAtT(adjustedTime + 0.001) - wristYAtT(adjustedTime)) * 16;
+            const rateX = -(wristXAtT(adjustedTime + 0.001) - wristXAtT(adjustedTime)) * 64;
+            //spring[1].setForce(wristY);
+            spring[1].setForce(-0.2 + rateY);
+            spring[1].update(springElasticity);
+            const springY = spring[1].getPosition();
+            spring[0].setForce(rateX);
+            spring[0].update(springElasticity);
+            const springX = spring[0].getPosition();
+            const springPos = add(wristPos, [springX, springY - weightHandleLength, 0]);
+            M.S().move(springPos).aim(subtract(springPos, wristPos)).scale(weightSize).draw(mySphere, [1, 1, 1], 1, 1).R();
+            M.S()
+              .move(mix(wristPos, springPos, 0.5))
+              .aim(subtract(springPos, wristPos))
+              .scale(weightHandleThickness, weightHandleThickness, distance(wristPos, springPos) / 2)
+              .draw(myCylinder, weightHandleColor)
+              .R();
+
+            M.R();
+          }
+
+          // ADD A TEXTURED OBJECT IN THE DISTANCE TO SHOW THAT FOG IS WORKING.
+          M.S()
+            .turnX(TAU / 4)
+            .scale(8, 8, Math.PI)
+            .draw(myTube, [1, 1, 1], 1, 0)
+            .R();
+
+          // BACKGROUND SPHERE
+          M.S().move(0, 0, 0).scale(16).draw(mySphere, [0, 0, 0], 1).R();
+        });
+      }
+      requestAnimationFrame(drawFrame);
+    </script>
+  </font>
+</body>
