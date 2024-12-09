@@ -146,5 +146,5 @@ Topic: inverse kinematics; spring
 
 |                                                                                    |                                                                                   |                |                |
 | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | -------------- | -------------- |
-| ![](assets/20241206-daily-experiment-cube-with-obj-code-overlay-1080p-frame-3.jpg) | ![](assets/20241207-daily-experiment-obj-code-overlay-cylinder-1080p-frame-2.jpg) | ![]()          | ![]()          |
-| [12/06/2024](https://www.instagram.com/p/DDRNoQbx3rx/)                             | [12/07/2024](https://www.instagram.com/p/DDTAquCMqfn/)                            | [12/08/2024]() | [12/09/2024]() |
+| ![](assets/20241206-daily-experiment-cube-with-obj-code-overlay-1080p-frame-3.jpg) | ![](assets/20241207-daily-experiment-obj-code-overlay-cylinder-1080p-frame-2.jpg) | ![](assets/20241208-daily-experiment-obj-code-overlay-combined-cubes-1080p-frame-2.jpg)          | ![]()          |
+| [12/06/2024](https://www.instagram.com/p/DDRNoQbx3rx/)                             | [12/07/2024](https://www.instagram.com/p/DDTAquCMqfn/)                            | [12/08/2024](https://www.instagram.com/p/DDWSfcsxolH/) | [12/09/2024]() |
