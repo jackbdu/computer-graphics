@@ -3,20 +3,15 @@
   <head>
     <title>OBJ Exporter</title>
     <style>
-      * {
+      div.inputsWrapper,
+      div.inputs,
+      input {
         margin: 0;
         padding: 0;
       }
       body {
-        background-color: #fff;
+        background-color: #000;
         font-family: Courier, monospace;
-      }
-      canvas,
-      aside,
-      div.inputs {
-        position: absolute;
-        top: 0;
-        left: 0;
       }
       aside {
         top: 720px;
@@ -30,6 +25,10 @@
         height: calc(1280px / 3);
         box-sizing: border-box;
         padding: 1em;
+      }
+      div.inputsWrapper {
+        width: 1280px;
+        display: flex;
       }
       div.inputs.faceX {
         left: calc(1280px / 3 * 0) px;
@@ -47,15 +46,23 @@
     </style>
   </head>
   <body>
-    <main>
-      <canvas id="canvas1" width="1280" height="720"></canvas>
-    </main>
-    <aside>
-      <button id="downloadButton">Download OBJ</button>
-    </aside>
-    <div class="faceX inputs"></div>
-    <div class="faceY inputs"></div>
-    <div class="faceZ inputs"></div>
+    <center>
+      <div style="color: #b0b0b0; font-family: arial, sans-serif">
+        <h1>Jack's Final Project</h1>
+        <p>[ <a style="color: #fff" href="https://jackbdu.com/computer-graphics/">Home</a> | <a style="color: #fff" href="https://github.com/jackbdu/computer-graphics/tree/main/final">Source Code</a>]</p>
+      </div>
+      <main>
+        <canvas id="canvas1" width="1280" height="720"></canvas>
+      </main>
+      <aside>
+        <button id="downloadButton">Download OBJ</button>
+      </aside>
+      <div class="inputsWrapper">
+        <div class="faceX inputs"></div>
+        <div class="faceY inputs"></div>
+        <div class="faceZ inputs"></div>
+      </div>
+    </center>
     <script src="lib.js"></script>
     <script src="obj-exporter.js"></script>
     <script>
