@@ -144,6 +144,8 @@ Topic: inverse kinematics; spring
 
 ### Final Project
 
+[ [Submission / Live Demo](https://jackbdu.com/computer-graphics/final) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/final) ]
+
 |                                                                                              |                                                                                                    |                                                                                                       |                                                                                                               |
 | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | ![](assets/20241206-daily-experiment-cube-with-obj-code-overlay-1080p-frame-3.jpg)           | ![](assets/20241207-daily-experiment-obj-code-overlay-cylinder-1080p-frame-2.jpg)                  | ![](assets/20241208-daily-experiment-obj-code-overlay-combined-cubes-1080p-frame-2.jpg)               | ![](assets/20241209-daily-experiment-obj-code-overlay-3d-sphere-grid-1080p-frame-1.jpg)                       |
