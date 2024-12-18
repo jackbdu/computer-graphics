@@ -271,6 +271,12 @@
         }
         M.R();
       };
+
+      let autoRotate = true;
+      canvas1.addEventListener("mousedown", () => {
+        autoRotate = false;
+      });
+
       function drawFrame() {
         frameCount++;
 
@@ -280,7 +286,7 @@
 
         const progress = time / loopDuration;
 
-        canvas1.rx = TAU * 30 * progress;
+        if (autoRotate) canvas1.rx = TAU * 30 * progress;
 
         // SCALE THE SCENE NON-UNIFORMLY BECAUSE THE CANVAS IS NOT SQUARE.
 
