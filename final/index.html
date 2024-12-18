@@ -1,0 +1,347 @@
+<!doctype html>
+<html>
+  <head>
+    <title>OBJ Exporter</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background-color: #fff;
+        font-family: Courier, monospace;
+      }
+      canvas,
+      aside,
+      div.inputs {
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+      aside {
+        top: 720px;
+        width: 1280px;
+        height: 4em;
+        display: flex;
+      }
+      div.inputs {
+        top: calc(720px + 4em);
+        width: calc(1280px / 3);
+        height: calc(1280px / 3);
+        box-sizing: border-box;
+        padding: 1em;
+      }
+      div.inputs.faceX {
+        left: calc(1280px / 3 * 0) px;
+      }
+      div.inputs.faceY {
+        left: calc(1280px / 3 * 1);
+      }
+      div.inputs.faceZ {
+        left: calc(1280px / 3 * 2);
+      }
+      button {
+        font-size: 2em;
+        flex-grow: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <canvas id="canvas1" width="1280" height="720"></canvas>
+    </main>
+    <aside>
+      <button id="downloadButton">Download OBJ</button>
+    </aside>
+    <div class="faceX inputs"></div>
+    <div class="faceY inputs"></div>
+    <div class="faceZ inputs"></div>
+    <script src="lib.js"></script>
+    <script src="obj-exporter.js"></script>
+    <script>
+      const loopDuration = 30;
+      const initialTurnX = Math.PI * 0.125;
+      const initialTurnY = Math.PI * 0.375;
+      const overallWidth = 1;
+      const overallHeight = 1;
+      const overallDepth = 1;
+      const cols = 12;
+      const rows = 12;
+      const deps = 12;
+
+      const faceTemplate = `111111111111
+                            100000000001
+                            100000000001
+                            100000000001
+                            100000000001
+                            100000000001
+                            100000000001
+                            100000000001
+                            100000000001
+                            100000000001
+                            100000000001
+                            111111111111`;
+
+      trackMouse(canvas1);
+
+      // PREBUILDING OBJECTS FOR EFFICIENCY
+
+      let myCube = Cube();
+      let mySquare = Square();
+      let myCylinder = Cylinder(16);
+      let mySphere = Sphere(32);
+      let myTube = Tube(16);
+      let myTorus = Torus(16);
+
+      addMaterial(
+        1,
+        `float noiseValue = noise(vec3(vTpos.x * 16., vTpos.y * 16., vTpos.z * 16.));
+              color = mix(color, vec3(noiseValue*noiseValue*noiseValue+0.1, noiseValue*noiseValue+0.1, noiseValue*noiseValue+0.1), min(.95,.07 * dot(vTpos, vTpos)));`
+      );
+      startGL(canvas1);
+
+      let frameCount = 0;
+      let objString = "";
+      let startTime = Date.now() / 1000;
+
+      const compoundCube = (cols = 5, rows = 5, deps = 5, progress = 0) => {
+        const cubeWidth = overallWidth / cols;
+        const cubeHeight = overallHeight / rows;
+        const cubeDepth = overallDepth / deps;
+        const offsetX = -overallWidth / 2;
+        const offsetY = -overallHeight / 2;
+        const offsetZ = -overallDepth / 2;
+        for (let c = 0; c < cols; c++) {
+          const cProgress = c / cols;
+          for (let r = 0; r < rows; r++) {
+            const rProgress = r / rows;
+            for (let d = 0; d < deps; d++) {
+              const dProgress = d / deps;
+              const x = cubeWidth * (c + 0.5);
+              const y = cubeHeight * (r + 0.5);
+              const z = cubeDepth * (d + 0.5);
+              const angle = 1 + 0.5 * S(rProgress * TAU + progress * TAU * 4);
+              M.S()
+                .move(offsetX, offsetY, offsetZ)
+                .move(x, y, z)
+                //.turnX(d % 2 != (r % 2 !== c % 2) ? TAU / 4 : 0)
+                .scale(1 - 0.1 * (r % 2))
+                //.turnY(r % 2 ? 0 : TAU / 16)
+                .turnY(angle)
+                //.scale(size, 1, size)
+                .scale(cubeWidth / 2, cubeHeight / 2, cubeDepth / 2)
+                .turnY(((r / rows) * TAU) / 4)
+                .drawObj(myCube, [1, 1, 1], 1)
+                .R();
+            }
+          }
+        }
+      };
+
+      const compoundSphere = (colsMax = 5, rows = 5, progress = 0) => {
+        const elementSize = 0.05;
+        const spikeThickness = 0.01;
+        for (let r = 0; r < rows; r++) {
+          const v = r / (rows - 1);
+          // const cols = Math.floor(colsMax * S(v * Math.PI) + 1);
+          let cols = Math.floor((colsMax * S(v * Math.PI)) / 2) * 2; // even numbers only for symmetry
+          if (cols === 0) cols = 1;
+          for (let c = 0; c < cols; c++) {
+            const u = c / cols;
+            // const color = [0.5 + 0.4 * S(v * TAU + 2.5), 0.5 + 0.4 * S(v * TAU + 1.5), 0.5 + 0.4 * S(v * TAU + 0.5)];
+            const color = [0.5 + 0.4 * S(Math.abs(v - 0.5) * TAU * 3 + 1.5), 0.5 + 0.4 * S(Math.abs(v - 0.5) * TAU + 2.0), 0.5 + 0.4 * S(Math.abs(v - 0.5) * TAU + 0.5)]; // symmetrical color
+            // const color = cols === 1 ? [0.8, 0, 0] : [0.8, 0.8, 0.8];
+            const timeOffset = u * TAU + v * TAU;
+            const xOffset = 0.0;
+            const yOffset = 0.7 + 0.1 * S(v * TAU * 3 + TAU * progress * 8);
+            const zOffset = 0.0;
+            const xRotation = u * TAU;
+            const yRotation = 0;
+            const zRotation = (v - 0.5) * Math.PI;
+            const xRotationLocal = 0;
+            const yRotationLocal = Math.PI / 2;
+            const zRotationLocal = 0;
+
+            M.S();
+            M.turnX(xRotation);
+            M.turnY(yRotation);
+            M.turnZ(zRotation);
+            if (v >= 0.5) M.S().scale(spikeThickness, 0.9, spikeThickness).drawObj(myCube, color, 1).R();
+            M.move(xOffset, yOffset, zOffset);
+            M.scale(elementSize, elementSize, elementSize);
+            M.turnX(xRotationLocal);
+            M.turnY(yRotationLocal);
+            M.turnZ(zRotationLocal);
+            M.drawObj(myCube, color, 1);
+            M.R();
+          }
+        }
+      };
+
+      const ambigramCube = (cols = 5, rows = 5, deps = 5, faceX = [], faceY = [], faceZ = [], progress = 0) => {
+        progress = 0;
+        const cubeWidth = overallWidth / cols;
+        const cubeHeight = overallHeight / rows;
+        const cubeDepth = overallDepth / deps;
+        const offsetX = -overallWidth / 2;
+        const offsetY = -overallHeight / 2;
+        const offsetZ = -overallDepth / 2;
+        const color = [1, 1, 1];
+        for (let c = 0; c < cols; c++) {
+          const cProgress = c / cols;
+          for (let r = 0; r < rows; r++) {
+            const rProgress = r / rows;
+            for (let d = 0; d < deps; d++) {
+              const faceXIndex = deps * r + d;
+              const faceXCheckbox = document.querySelectorAll(".faceX.inputs input")[faceXIndex];
+              const faceYIndex = cols * d + c;
+              const faceYCheckbox = document.querySelectorAll(".faceY.inputs input")[faceYIndex];
+              const faceZIndex = cols * r + c;
+              const faceZCheckbox = document.querySelectorAll(".faceZ.inputs input")[faceZIndex];
+              const dProgress = d / deps;
+              const x = cubeWidth * (c + 0.5);
+              const y = cubeHeight * (r + 0.5);
+              const z = cubeDepth * (d + 0.5);
+              if (faceXCheckbox.checked && faceYCheckbox.checked && faceZCheckbox.checked) {
+                M.S()
+                  .move(offsetX, offsetY, offsetZ)
+                  .move(x, y, z)
+                  .scale(cubeWidth / 2, cubeHeight / 2, cubeDepth / 2)
+                  .drawObj(myCube, color, 1)
+                  .R();
+              }
+            }
+          }
+        }
+      };
+
+      const patternedSphere = (colsMax = 5, rows = 5, progress = 0) => {
+        const elementWidth = 0.04;
+        const elementHeight = 0.02;
+        const elementDepth = 0.06;
+        M.S();
+        const overallScale = 0.8;
+        const color = [0.95, 0.2, 0.05];
+        M.scale(overallScale);
+        M.S();
+        M.turnY(TAU / 4);
+        M.drawObj(mySphere, color, 1);
+        M.R();
+        for (let r = 0; r < rows; r++) {
+          const v = r / (rows - 1);
+          // const cols = Math.floor(colsMax * S(v * Math.PI) + 1);
+          let cols = Math.floor((colsMax * S(v * Math.PI)) / 2) * 2; // even numbers only for symmetry
+          if (cols === 0) cols = 1;
+          for (let c = 0; c < cols; c++) {
+            const u = c / cols;
+            // const color = [0.2 + 0.1 * C(Math.abs(v - 0.5) * TAU * 2 + 1.0), 0.3 + 0.2 * C(Math.abs(v - 0.5) * TAU * 0.3 + 0.0), 0.2 + 0.1 * C(Math.abs(v - 0.5) * TAU * 1 + 1)]; // symmetrical color
+            // const color = cols === 1 ? [0.8, 0, 0] : [0.8, 0.8, 0.8];
+            const elementColor = color.map((v) => v * 0.7);
+            console.log(elementColor);
+            const timeOffset = u * TAU + v * TAU;
+            const xOffset = 0.0;
+            const yOffset = 1;
+            const zOffset = 0.0;
+            const xRotation = u * TAU;
+            const yRotation = TAU / 8;
+            const zRotation = (v - 0.5) * Math.PI;
+            const xRotationLocal = 0;
+            const yRotationLocal = Math.PI / 2;
+            const zRotationLocal = 0;
+
+            M.S();
+            M.turnX(xRotation);
+            M.turnZ(zRotation);
+            M.move(xOffset, yOffset, zOffset);
+            M.turnY(yRotation);
+            M.scale(elementWidth, elementHeight, elementDepth);
+            M.turnX(xRotationLocal);
+            M.turnY(yRotationLocal);
+            M.turnZ(zRotationLocal);
+            M.drawObj(myCube, elementColor, 1);
+            M.R();
+          }
+        }
+        M.R();
+      };
+      function drawFrame() {
+        frameCount++;
+
+        let time = Date.now() / 1000 - startTime;
+        requestAnimationFrame(drawFrame);
+        clearObj();
+
+        const progress = time / loopDuration;
+
+        canvas1.rx = TAU * 30 * progress;
+
+        // SCALE THE SCENE NON-UNIFORMLY BECAUSE THE CANVAS IS NOT SQUARE.
+
+        VM.identity()
+          .perspective(3)
+          .turnX(initialTurnX)
+          .turnY(initialTurnY)
+          .scale(1, canvas1.width / canvas1.height, 1);
+
+        // USE THE MOUSE TO ROTATE THE VIEW ONLY IF NOT RUNNING ON A PHONE.
+        if (!isPhone()) VM.turnX(canvas1.ry / 30).turnY(canvas1.rx / 30);
+
+        M.S();
+        M.scale(0.5);
+        ambigramCube(cols, rows, deps, [], [], [], progress);
+        M.R();
+
+        // BACKGROUND SPHERE
+        M.S().move(0, 0, 0).scale(4).draw(mySphere, [0, 0, 0], 1).R();
+        drawScene(() => {
+          material = 1;
+        });
+      }
+      requestAnimationFrame(drawFrame);
+
+      // https://www.delftstack.com/howto/javascript/javascript-download/
+      const downloadFile = (filename, textInput) => {
+        const element = document.createElement("a");
+        element.setAttribute("href", "data:text/plain;charset=utf-8, " + encodeURIComponent(textInput));
+        element.setAttribute("download", filename);
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+      };
+
+      const downloadObj = () => {
+        const compiledObj = compileObj();
+        const text = compiledObj;
+        const filename = "patterned-sphere.obj";
+        // console.log(text);
+        downloadFile(filename, text);
+      };
+
+      document.getElementById("downloadButton").addEventListener("click", downloadObj);
+
+      inputsTemplate = faceTemplate
+        .trim()
+        .split("\n")
+        .map((s) => s.trim())
+        .join("");
+      // AMBIGRAM INPUTS
+      for (const [face, inputsCols, inputsRows] of [
+        ["faceZ", cols, rows],
+        ["faceX", deps, rows],
+        ["faceY", cols, deps],
+      ]) {
+        const faceInputs = document.querySelector(`.${face}.inputs`);
+        for (let i = 0; i < inputsCols * inputsRows; i++) {
+          const templateStatus = inputsTemplate.charAt(i) === "1";
+          const checkbox = document.createElement("input");
+          const w = 100 / inputsCols;
+          const h = 100 / inputsRows;
+          checkbox.type = "checkbox";
+          checkbox.checked = templateStatus;
+          checkbox.style = `width: ${w}%; height: ${h}%;`;
+          faceInputs.appendChild(checkbox);
+        }
+      }
+    </script>
+  </body>
+</html>
