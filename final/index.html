@@ -67,7 +67,7 @@
     <script src="obj-exporter.js"></script>
     <script>
       const loopDuration = 30;
-      const initialTurnX = Math.PI * 0.125;
+      const initialTurnX = Math.PI * 0.1;
       const initialTurnY = Math.PI * 0.375;
       const overallWidth = 1;
       const overallHeight = 1;
@@ -131,11 +131,8 @@
               M.S()
                 .move(offsetX, offsetY, offsetZ)
                 .move(x, y, z)
-                //.turnX(d % 2 != (r % 2 !== c % 2) ? TAU / 4 : 0)
                 .scale(1 - 0.1 * (r % 2))
-                //.turnY(r % 2 ? 0 : TAU / 16)
                 .turnY(angle)
-                //.scale(size, 1, size)
                 .scale(cubeWidth / 2, cubeHeight / 2, cubeDepth / 2)
                 .turnY(((r / rows) * TAU) / 4)
                 .drawObj(myCube, [1, 1, 1], 1)
@@ -150,14 +147,11 @@
         const spikeThickness = 0.01;
         for (let r = 0; r < rows; r++) {
           const v = r / (rows - 1);
-          // const cols = Math.floor(colsMax * S(v * Math.PI) + 1);
           let cols = Math.floor((colsMax * S(v * Math.PI)) / 2) * 2; // even numbers only for symmetry
           if (cols === 0) cols = 1;
           for (let c = 0; c < cols; c++) {
             const u = c / cols;
-            // const color = [0.5 + 0.4 * S(v * TAU + 2.5), 0.5 + 0.4 * S(v * TAU + 1.5), 0.5 + 0.4 * S(v * TAU + 0.5)];
             const color = [0.5 + 0.4 * S(Math.abs(v - 0.5) * TAU * 3 + 1.5), 0.5 + 0.4 * S(Math.abs(v - 0.5) * TAU + 2.0), 0.5 + 0.4 * S(Math.abs(v - 0.5) * TAU + 0.5)]; // symmetrical color
-            // const color = cols === 1 ? [0.8, 0, 0] : [0.8, 0.8, 0.8];
             const timeOffset = u * TAU + v * TAU;
             const xOffset = 0.0;
             const yOffset = 0.7 + 0.1 * S(v * TAU * 3 + TAU * progress * 8);
@@ -236,13 +230,10 @@
         M.R();
         for (let r = 0; r < rows; r++) {
           const v = r / (rows - 1);
-          // const cols = Math.floor(colsMax * S(v * Math.PI) + 1);
           let cols = Math.floor((colsMax * S(v * Math.PI)) / 2) * 2; // even numbers only for symmetry
           if (cols === 0) cols = 1;
           for (let c = 0; c < cols; c++) {
             const u = c / cols;
-            // const color = [0.2 + 0.1 * C(Math.abs(v - 0.5) * TAU * 2 + 1.0), 0.3 + 0.2 * C(Math.abs(v - 0.5) * TAU * 0.3 + 0.0), 0.2 + 0.1 * C(Math.abs(v - 0.5) * TAU * 1 + 1)]; // symmetrical color
-            // const color = cols === 1 ? [0.8, 0, 0] : [0.8, 0.8, 0.8];
             const elementColor = color.map((v) => v * 0.7);
             console.log(elementColor);
             const timeOffset = u * TAU + v * TAU;
@@ -292,12 +283,10 @@
 
         VM.identity()
           .perspective(3)
-          .turnX(initialTurnX)
-          .turnY(initialTurnY)
           .scale(1, canvas1.width / canvas1.height, 1);
 
         // USE THE MOUSE TO ROTATE THE VIEW ONLY IF NOT RUNNING ON A PHONE.
-        if (!isPhone()) VM.turnX(canvas1.ry / 30).turnY(canvas1.rx / 30);
+        if (!isPhone()) VM.turnX(canvas1.ry / 30 + initialTurnX).turnY(canvas1.rx / 30 + initialTurnY);
 
         M.S();
         M.scale(0.5);
