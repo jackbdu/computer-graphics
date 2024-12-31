@@ -6,11 +6,7 @@ This repository contains computer graphics experiments I developed in JavaScript
 
 The experiments were developed based on the materials covered in class, and the source code linked on this page contains templates, libraries (e.g., `lib1.js`), and functions (e.g.,`noise()`, `turbulence()`, etc.) provided by the professor.
 
-## Weekly Submissions & Daily Progressions
-
-### Homework 1
-
-Topic: fragment shaders
+## Topic #1: Fragment Shaders
 
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw1) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw1) ]
 
@@ -21,9 +17,7 @@ Topic: fragment shaders
 | ![](assets/20240915-daily-experiment-glsl-shader-frag-disintegrating-sphere-fluid-surface-colorful-with-blue-tint-1080p-frame-1.png) | ![](assets/20240916-daily-experiment-glsl-shader-frag-disintegrating-sphere-fluid-surface-colorful-with-colorful-tint-1080p-frame-5.png) | ![](assets/20240917-daily-experiment-glsl-shader-frag-disintegrating-sphere-fluid-surface-colorful-tint-noise-background-1080p-frame-4.png) | ![](assets/20240918-daily-experiment-glsl-shader-frag-disintegrating-sphere-fluid-surface-colorful-tint-environment-noise-1080p-frame-3.png) |
 | [09/15/2024](https://www.instagram.com/p/C_87DfKy8q6/)                                                                               | [09/16/2024](https://www.instagram.com/p/C__NWBKxSkf/)                                                                                   | [09/17/2024](https://www.instagram.com/p/DAC3i1asOCs/)                                                                                      | [09/18/2024](https://www.instagram.com/p/DAF4ghvRg-O/)                                                                                       |
 
-### Homework 2
-
-Topics: ray tracing; Phong reflectance; procedural noise and textures
+## Topic #2: Ray Tracing, Phong Reflectance, Procedural Noise and Textures
 
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw2) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw2) ]
 
@@ -38,9 +32,7 @@ Topics: ray tracing; Phong reflectance; procedural noise and textures
 | ![](assets/20241001-daily-experiment-glsl-shader-frag-rolling-marbles-otherworldly-1080p-frame-1.png)           | ![](assets/20241002-daily-experiment-glsl-shader-frag-rolling-fire-balls-1080p-frame-1.png)                                             |
 | [10/01/2024](https://www.instagram.com/p/DAnal2Gxo-4/)                                                          | [10/02/2024](https://www.instagram.com/p/DApo_p1RTyX/)                                                                                  |
 
-### Homework 3
-
-Topics: reflection and refraction in ray tracing; matrices and linear transformations
+## Topic #3: Reflection and Refraction, Matrices and Linear Transformations
 
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw3) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw3) ]
 
@@ -51,9 +43,7 @@ Topics: reflection and refraction in ray tracing; matrices and linear transforma
 | ![](assets/20241007-daily-experiment-glsl-frag-shader-translucent-spheres-reflections-on-wavy-water-1080p-frame-0000000.png) | ![](assets/20241008-daily-experiment-glsl-frag-shader-translucent-spheres-reflections-on-wavy-water-violet-1080p-frame-0000000.png) |
 | [10/07/2024](https://www.instagram.com/p/DA1uwuesQfd/)                                                                       | [10/08/2024](https://www.instagram.com/p/DA413bgMe9k/)                                                                              |
 
-### Homework 4
-
-Topic: ray tracing to general quadric surfaces
+## Topic #4: Ray Tracing to General Quadric Surfaces
 
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw4) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw4) ]
 
@@ -64,9 +54,7 @@ Topic: ray tracing to general quadric surfaces
 | ![](assets/20241013-daily-experiment-glsl-frag-shader-purple-jade-with-lenses-with-reflection-1080p-frame-0000000.png) | ![](assets/20241014-daily-experiment-glsl-frag-shader-purple-jade-with-reflective-lenses-first-person-view-1080p-frame-0000075.png) | ![](assets/20241015-daily-experiment-glsl-frag-shader-blue-gem-with-various-reflective-lenses-1080p-frame-0000000.png) | ![](assets/20241016-daily-experiment-glsl-frag-shader-blue-marble-with-crystal-lenses-1080p-frame-0000000.png) |
 | [10/13/2024](https://www.instagram.com/p/DBF5TL8sSuk/)                                                                 | [10/14/2024](https://www.instagram.com/p/DBH1aqxMfUg/)                                                                              | [10/15/2024](https://www.instagram.com/p/DBKRlXHStYu/)                                                                 | [10/16/2024](https://www.instagram.com/p/DBN98DNRD9B/)                                                         |
 
-### Homework 5
-
-Topics: vertex shaders; polygons
+## Topic #5: Vertex Shaders
 
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw5) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw5) ]
 
@@ -77,9 +65,7 @@ Topics: vertex shaders; polygons
 | ![](assets/20241021-daily-experiment-colorful-wavy-spheres-forming-a-cube-1080p-frame-0000740.png) | ![](assets/20241022-daily-experiment-colorful-wavy-spheres-forming-cube-or-sphere-1080p-frame-0000000.png) | ![](assets/20241023-daily-experiment-two-perspective-object-skull-and-ghost-1080p-frame-0000000.png) |
 | [10/21/2024](https://www.instagram.com/p/DBbChceR08L/)                                             | [10/22/2024](https://www.instagram.com/p/DBcxM9tsvh4/)                                                     | [10/23/2024](https://www.instagram.com/p/DBezLVHRHNM/)                                               |
 
-### Homework 6
-
-Topics: hierarchical models; joint rotation
+## Topic #6: Hierarchical Models, Joint Rotation
 
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw6) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw6) ]
 
@@ -90,9 +76,7 @@ Topics: hierarchical models; joint rotation
 | ![](assets/20241028-daily-experiment-person-sphere-even-distribution-1080p-frame-0000000.png) | ![](assets/20241029-daily-experiment-person-trapped-in-spherical-cage-formed-by-people-1080p-frame-0000000.png) | ![](assets/20241030-daily-experiment-person-confined-in-sphere-formed-by-colorful-people-1080p-frame-0000000.png) | ![](assets/20241031-daily-experiment-person-confined-in-blob-formed-by-colorful-people-1080p-frame-0000000.png) |
 | [10/28/2024](https://www.instagram.com/p/DBrha4ByFin/)                                        | [10/29/2024](https://www.instagram.com/p/DBvU55xxhgP/)                                                          | [10/30/2024](https://www.instagram.com/p/DByOxQ_RZ-G/)                                                            | [10/31/2024](https://www.instagram.com/p/DB0Y7xYs02w/)                                                          |
 
-### Homework 7
-
-Topic: human/computer interaction
+## Topic #7: Human/Computer Interaction
 
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw7) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw7) ]
 
@@ -103,9 +87,7 @@ Topic: human/computer interaction
 | ![](assets/20241105-daily-experiment-hand-pose-sliders-controlling-rotation-transcluent-ahnds-1080p-frame-3.jpg) | ![](assets/20241106-daily-experiment-hand-pose-many-sliders-1080p-frame-2.jpg)         |                                                                                                       |                                                                                                |
 | [11/05/2024](https://www.instagram.com/p/DCEH7wCRdUV/)                                                           | [11/06/2024](https://www.instagram.com/p/DCFyxg7smXj/)                                 |                                                                                                       |
 
-### Homework 8
-
-Topic: texture mapping
+## Topic #8: Texture Mapping
 
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw8) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw8) ]
 
@@ -116,9 +98,7 @@ Topic: texture mapping
 | ![](assets/20241111-daily-experiment-truchet-inspired-stripe-pattern-formed-by-cubes-4x4x4-1080p-frame-0000994.png) | ![](assets/20241112-daily-experiment-truchet-inspired-stripe-pattern-formed-by-cubes-4x4x4-random-texture-each-side-1080p-frame-0000879.png) | ![](assets/20241113-daily-experiment-truchet-inspired-stripe-pattern-formed-by-cubes-4x4x4-green-1080p-frame-0000416.png) | ![](assets/)                                                                                                                              |
 | [11/11/2024](https://www.instagram.com/p/DCQNd5WshYD/)                                                              | [11/12/2024](https://www.instagram.com/p/DCSkzVlMLOQ/)                                                                                       | [11/13/2024](https://www.instagram.com/p/DCUjd2yRdSm/)                                                                    |
 
-### Homework 9
-
-Topic: spline curves
+## Topic #9: Spline Curves
 
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw9) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw9) ]
 
@@ -129,9 +109,7 @@ Topic: spline curves
 | ![](assets/20241118-daily-experiment-beizer-splines-with-enhanced-editability-1080p-frame-4.jpg)     | ![](assets/20241119-daily-experiment-beizer-splines-symmetrical-control-points-and-select-all-1080p-frame-6.jpg) | ![](assets/20241120-daily-experiment-beizer-splines-animated-circle-along-spline-1080p-frame-3.jpg) | ![](assets/20241121-daily-experiment-beizer-splines-animated-colorful-circles-along-multiple-splines-1080p-frame-4.jpg) |
 | [11/18/2024](https://www.instagram.com/p/DChlSd9y4zB/)                                               | [11/19/2024](https://www.instagram.com/p/DClMydnsBXQ/)                                                           | [11/20/2024](https://www.instagram.com/p/DCoUfxzxeos/)                                              | [11/21/2024](https://www.instagram.com/p/DCqdbVVx3TC/)                                                                  |
 
-### Homework 10
-
-Topic: inverse kinematics; spring
+## Topic #10: Inverse Kinematics, Spring
 
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/hw10) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/hw10) ]
 
@@ -142,7 +120,7 @@ Topic: inverse kinematics; spring
 | ![](assets/20241126-daily-experiment-arms-lifting-springy-weight-forming-a-circle-1080p-frame-0000000.png) | ![](assets/20241127-daily-experiment-arms-lifting-springy-weight-forming-a-circle-synced-motion-1080p-frame-0001409.png)   | ![](assets/20241128-daily-experiment-arms-lifting-springy-weight-forming-a-circle-alternating-motion-1080p-frame-0000000.png) | ![](assets/20241129-daily-experiment-arms-lifting-springy-weight-forming-a-wave-1080p-frame-0000000.png)             |
 | [11/26/2024](https://www.instagram.com/jackbdu/)                                                           | [11/27/2024](https://www.instagram.com/p/DC4jsRIRkA1/)                                                                     | [11/28/2024](https://www.instagram.com/p/DC8xOIxxoQT/)                                                                        | [11/29/2024](https://www.instagram.com/p/DC-5EikMtil/)                                                               |
 
-### Final Project
+## Final Project: Ambigram Maker
 
 [ [Submission / Live Demo](https://jackbdu.com/computer-graphics/final) \| [Source Code](https://github.com/jackbdu/computer-graphics/tree/main/final) ]
 
